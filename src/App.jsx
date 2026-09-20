@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import StudyTimer from './components/StudyTimer';
 import ReviewsQueue from './components/ReviewsQueue';
@@ -18,8 +18,6 @@ import {
   updateDoc,
   serverTimestamp 
 } from 'firebase/firestore';
-
-const INITIAL_SECONDS = 1500; // 25 minutos
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -140,12 +138,8 @@ export default function App() {
     };
   }, [user, selectedTopic]);
 
-  // Hook do Cronómetro
-  const handleTimerComplete = useCallback(() => {
-    setShowEvaluationModal(true);
-  }, []);
-
-  const { seconds, isActive, toggleTimer, resetTimer, formatTime } = useTimer(INITIAL_SECONDS, handleTimerComplete);
+  // Hook do Cronômetro livre (progressivo)
+  const { seconds, isActive, toggleTimer, resetTimer, formatTime } = useTimer();
 
   // Adicionar novo tópico
   const handleAddNewTopic = async (e) => {
@@ -171,13 +165,13 @@ export default function App() {
   const handleSM2Submit = async (quality) => {
     if (!user || !selectedTopic) return;
 
-    const tempoEstudado = INITIAL_SECONDS - seconds;
-    const duracaoSessao = tempoEstudado > 0 ? tempoEstudado : 60; // Pelo menos 1 min
+    // Duração exata cronometrada (mínimo de 1 segundo para registro)
+    const duracaoSessao = seconds > 0 ? seconds : 1;
 
     const resultSM2 = calculateSM2(quality, 1, 1, 2.5);
 
     try {
-      // 1. Gravar sessão
+      // 1. Gravar sessão com o tempo livre estudado
       await addDoc(collection(db, 'sessoes'), {
         usuario_id: user.uid,
         topico: selectedTopic,
@@ -185,7 +179,7 @@ export default function App() {
         criado_em: serverTimestamp()
       });
 
-      // 2. Agendar revisão
+      // 2. Agendar revisão pelo SM-2
       await addDoc(collection(db, 'revisoes'), {
         usuario_id: user.uid,
         topico: selectedTopic,
@@ -220,13 +214,13 @@ export default function App() {
     }
 
     setShowEvaluationModal(false);
-    resetTimer();
+    resetTimer(); // Zera o cronômetro para 00:00 para a próxima sessão
   };
 
   if (authLoading) {
     return (
       <div className="h-screen bg-slate-950 flex items-center justify-center text-amber-400 font-bold">
-        A carregar o OrgaLearn...
+        Carregando OrgaLearn...
       </div>
     );
   }
