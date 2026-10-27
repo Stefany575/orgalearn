@@ -3,11 +3,13 @@ import Sidebar from './components/Sidebar';
 import StudyTimer from './components/StudyTimer';
 import ReviewsQueue from './components/ReviewsQueue';
 import DashboardView from './components/DashboardView';
+import MetricsView from './components/MetricsView';
 import AuthModal from './components/AuthModal';
 import { useTimer } from './hooks/useTimer';
 import { calculateSM2 } from './utils/sm2';
 import { auth, db } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { X } from 'lucide-react';
 import { 
   collection, 
   query, 
@@ -23,9 +25,10 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('timer');
+  
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
+  const [reviewBeingEvaluated, setReviewBeingEvaluated] = useState(null);
 
-  // Estados de dados
   const [userStats, setUserStats] = useState({
     nome: "Estudante",
     nivel: 1,
@@ -44,7 +47,6 @@ export default function App() {
   const [revisoes, setRevisoes] = useState([]);
   const [sessoes, setSessoes] = useState([]);
 
-  // 1. Monitorar autenticação
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -53,11 +55,9 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Sincronização em tempo real do utilizador e dados
   useEffect(() => {
     if (!user) return;
 
-    // Perfil do utilizador
     const userDocRef = doc(db, 'usuarios', user.uid);
     const unsubUser = onSnapshot(userDocRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -73,7 +73,6 @@ export default function App() {
       }
     });
 
-    // Tópicos
     const qTopicos = query(collection(db, 'topicos'), where('usuario_id', '==', user.uid));
     const unsubTopicos = onSnapshot(qTopicos, (snapshot) => {
       const topicosList = snapshot.docs.map(doc => doc.data().titulo);
@@ -83,14 +82,12 @@ export default function App() {
       }
     });
 
-    // Revisões
     const qRevisoes = query(collection(db, 'revisoes'), where('usuario_id', '==', user.uid));
     const unsubRevisoes = onSnapshot(qRevisoes, (snapshot) => {
       const revisoesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setRevisoes(revisoesList);
     });
 
-    // Sessões de estudo e totalização dinâmica de horas
     const qSessoes = query(collection(db, 'sessoes'), where('usuario_id', '==', user.uid));
     const unsubSessoes = onSnapshot(qSessoes, (snapshot) => {
       const sessoesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -138,10 +135,8 @@ export default function App() {
     };
   }, [user, selectedTopic]);
 
-  // Hook do Cronômetro livre (progressivo)
   const { seconds, isActive, toggleTimer, resetTimer, formatTime } = useTimer();
 
-  // Adicionar novo tópico
   const handleAddNewTopic = async (e) => {
     e.preventDefault();
     if (!newTopicName.trim() || !user) return;
@@ -161,37 +156,66 @@ export default function App() {
     }
   };
 
-  // Submeter avaliação SM-2
+  const handleOpenEvaluationFromTimer = () => {
+    setReviewBeingEvaluated(null);
+    setShowEvaluationModal(true);
+  };
+
+  const handleOpenEvaluationFromQueue = (review) => {
+    setReviewBeingEvaluated(review);
+    setSelectedTopic(review.topico);
+    setShowEvaluationModal(true);
+  };
+
   const handleSM2Submit = async (quality) => {
     if (!user || !selectedTopic) return;
 
-    // Duração exata cronometrada (mínimo de 1 segundo para registro)
-    const duracaoSessao = seconds > 0 ? seconds : 1;
-
-    const resultSM2 = calculateSM2(quality, 1, 1, 2.5);
-
     try {
-      // 1. Gravar sessão com o tempo livre estudado
-      await addDoc(collection(db, 'sessoes'), {
-        usuario_id: user.uid,
-        topico: selectedTopic,
-        duracao_segundos: duracaoSessao,
-        criado_em: serverTimestamp()
-      });
+      if (reviewBeingEvaluated) {
+        const repeticaoAtual = (reviewBeingEvaluated.repeticoes || 1) + 1;
+        const efAtual = reviewBeingEvaluated.ef || 2.5;
+        const intervaloAnterior = reviewBeingEvaluated.intervalo_dias || 1;
 
-      // 2. Agendar revisão pelo SM-2
-      await addDoc(collection(db, 'revisoes'), {
-        usuario_id: user.uid,
-        topico: selectedTopic,
-        ultimaRevisao: 'Hoje',
-        avaliacaoAnterior: `${quality}/5`,
-        ef: resultSM2.easinessFactor,
-        status: 'agendado',
-        proximaData: `em ${resultSM2.interval} dia(s)`,
-        criado_em: serverTimestamp()
-      });
+        const resultSM2 = calculateSM2(quality, repeticaoAtual, intervaloAnterior, efAtual);
 
-      // 3. Atualizar XP e níveis
+        const revDocRef = doc(db, 'revisoes', reviewBeingEvaluated.id);
+        await updateDoc(revDocRef, {
+          ultimaRevisao: 'Hoje',
+          avaliacaoAnterior: `${quality}/5`,
+          ef: resultSM2.easinessFactor,
+          intervalo_dias: resultSM2.interval,
+          repeticoes: resultSM2.repetitions,
+          proximaData: `em ${resultSM2.interval} dia(s)`,
+          status: 'revisado',
+          atualizado_em: serverTimestamp()
+        });
+      } else {
+        const duracaoSessao = seconds > 0 ? seconds : 1;
+        const resultSM2 = calculateSM2(quality, 1, 1, 2.5);
+
+        await addDoc(collection(db, 'sessoes'), {
+          usuario_id: user.uid,
+          topico: selectedTopic,
+          duracao_segundos: duracaoSessao,
+          criado_em: serverTimestamp()
+        });
+
+        await addDoc(collection(db, 'revisoes'), {
+          usuario_id: user.uid,
+          topico: selectedTopic,
+          ultimaRevisao: 'Hoje',
+          avaliacaoAnterior: `${quality}/5`,
+          ef: resultSM2.easinessFactor,
+          intervalo_dias: resultSM2.interval,
+          repeticoes: 1,
+          status: 'agendado',
+          proximaData: `em ${resultSM2.interval} dia(s)`,
+          criado_em: serverTimestamp()
+        });
+
+        resetTimer();
+      }
+
       const novoXP = userStats.xp + 18;
       let novoNivel = userStats.nivel;
       let proxXP = userStats.nextLevelXp;
@@ -210,11 +234,11 @@ export default function App() {
       });
 
     } catch (err) {
-      console.error('Erro ao salvar no Firestore:', err);
+      console.error('Erro ao processar SM-2 no Firestore:', err);
     }
 
+    setReviewBeingEvaluated(null);
     setShowEvaluationModal(false);
-    resetTimer(); // Zera o cronômetro para 00:00 para a próxima sessão
   };
 
   if (authLoading) {
@@ -235,7 +259,7 @@ export default function App() {
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         userStats={userStats} 
-        pendingReviewsCount={revisoes.filter(r => r.status === 'pendente').length} 
+        pendingReviewsCount={revisoes.length} 
       />
 
       <main className="flex-1 overflow-y-auto p-8">
@@ -254,7 +278,7 @@ export default function App() {
             toggleTimer={toggleTimer}
             resetTimer={resetTimer}
             formatTime={formatTime}
-            onOpenEvaluation={() => setShowEvaluationModal(true)}
+            onOpenEvaluation={handleOpenEvaluationFromTimer}
             userStats={userStats}
           />
         )}
@@ -265,7 +289,8 @@ export default function App() {
             onReviewNow={(topico) => {
               setSelectedTopic(topico);
               setActiveTab('timer');
-            }} 
+            }}
+            onCompleteReview={handleOpenEvaluationFromQueue}
           />
         )}
 
@@ -274,27 +299,42 @@ export default function App() {
         )}
 
         {activeTab === 'metricas' && (
-          <div className="space-y-6">
-            <h2 className="text-3xl font-extrabold text-slate-100">Métricas & Análise</h2>
-            <div className="bg-slate-800/80 p-6 rounded-2xl border border-slate-700/60">
-              <p className="text-sm text-slate-400">
-                Visão analítica da consistência de revisões e retenção estimada pelo algoritmo SM-2.
-              </p>
-            </div>
-          </div>
+          <MetricsView sessoes={sessoes} revisoes={revisoes} />
         )}
       </main>
 
-      {/* MODAL DE AUTOAVALIAÇÃO SM-2 */}
       {showEvaluationModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-md w-full space-y-6 shadow-2xl">
-            <div className="text-center space-y-2">
-              <h3 className="text-xl font-bold text-slate-100">Como foi o seu desempenho?</h3>
+        <div 
+          onClick={() => {
+            setShowEvaluationModal(false);
+            setReviewBeingEvaluated(null);
+          }}
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 cursor-pointer"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-md w-full space-y-6 shadow-2xl relative cursor-default"
+          >
+            <button
+              onClick={() => {
+                setShowEvaluationModal(false);
+                setReviewBeingEvaluated(null);
+              }}
+              title="Cancelar e fechar"
+              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded-lg transition"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="text-center space-y-2 pr-4">
+              <h3 className="text-xl font-bold text-slate-100">
+                {reviewBeingEvaluated ? 'Como foi a sua revisão?' : 'Como foi o seu desempenho?'}
+              </h3>
               <p className="text-xs text-slate-400">
-                A sua nota alimentará o cálculo do algoritmo SM-2 para o tópico <b className="text-amber-400">{selectedTopic || 'selecionado'}</b>.
+                Sua nota atualizará o cálculo do SM-2 para <b className="text-amber-400">{selectedTopic || 'o tópico'}</b>.
               </p>
             </div>
+
             <div className="grid grid-cols-6 gap-2">
               {[0, 1, 2, 3, 4, 5].map((nota) => (
                 <button
@@ -310,6 +350,7 @@ export default function App() {
                 </button>
               ))}
             </div>
+
             <div className="flex justify-between text-xs text-slate-500">
               <span>0 - Esqueceu totalmente</span>
               <span>5 - Lembrança perfeita</span>
