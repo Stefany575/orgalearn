@@ -18,6 +18,8 @@ import {
   addDoc, 
   doc, 
   updateDoc,
+  deleteDoc,
+  getDocs,
   serverTimestamp 
 } from 'firebase/firestore';
 
@@ -79,6 +81,8 @@ export default function App() {
       setTopicos(topicosList);
       if (topicosList.length > 0 && !selectedTopic) {
         setSelectedTopic(topicosList[0]);
+      } else if (topicosList.length === 0) {
+        setSelectedTopic('');
       }
     });
 
@@ -156,6 +160,51 @@ export default function App() {
     }
   };
 
+  // EXCLUIR TÓPICO DO FIRESTORE
+  const handleDeleteTopic = async (topicTitle) => {
+    if (!user || !topicTitle) return;
+    const confirmacao = window.confirm(`Deseja realmente excluir o tópico "${topicTitle}"?`);
+    if (!confirmacao) return;
+
+    try {
+      const q = query(
+        collection(db, 'topicos'), 
+        where('usuario_id', '==', user.uid), 
+        where('titulo', '==', topicTitle)
+      );
+      const snapshot = await getDocs(q);
+      const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'topicos', d.id)));
+      await Promise.all(deletePromises);
+
+      if (selectedTopic === topicTitle) {
+        const restantes = topicos.filter(t => t !== topicTitle);
+        setSelectedTopic(restantes.length > 0 ? restantes[0] : '');
+      }
+    } catch (err) {
+      console.error('Erro ao excluir tópico:', err);
+    }
+  };
+
+  // EXCLUIR TODAS AS REVISÕES DO ASSUNTO
+  const handleDeleteReview = async (review) => {
+    if (!user || !review?.topico) return;
+    const confirmacao = window.confirm(`Deseja remover todas as revisões agendadas para "${review.topico}"?`);
+    if (!confirmacao) return;
+
+    try {
+      const q = query(
+        collection(db, 'revisoes'),
+        where('usuario_id', '==', user.uid),
+        where('topico', '==', review.topico)
+      );
+      const snapshot = await getDocs(q);
+      const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'revisoes', d.id)));
+      await Promise.all(deletePromises);
+    } catch (err) {
+      console.error('Erro ao remover revisão:', err);
+    }
+  };
+
   const handleOpenEvaluationFromTimer = () => {
     setReviewBeingEvaluated(null);
     setShowEvaluationModal(true);
@@ -171,14 +220,27 @@ export default function App() {
     if (!user || !selectedTopic) return;
 
     try {
-      if (reviewBeingEvaluated) {
-        const repeticaoAtual = (reviewBeingEvaluated.repeticoes || 1) + 1;
-        const efAtual = reviewBeingEvaluated.ef || 2.5;
-        const intervaloAnterior = reviewBeingEvaluated.intervalo_dias || 1;
+      const revisaoExistente = reviewBeingEvaluated || revisoes.find(r => r.topico === selectedTopic);
+
+      if (revisaoExistente) {
+        const repeticaoAtual = (revisaoExistente.repeticoes || 1) + 1;
+        const efAtual = revisaoExistente.ef || 2.5;
+        const intervaloAnterior = revisaoExistente.intervalo_dias || 1;
 
         const resultSM2 = calculateSM2(quality, repeticaoAtual, intervaloAnterior, efAtual);
 
-        const revDocRef = doc(db, 'revisoes', reviewBeingEvaluated.id);
+        if (!reviewBeingEvaluated) {
+          const duracaoSessao = seconds > 0 ? seconds : 1;
+          await addDoc(collection(db, 'sessoes'), {
+            usuario_id: user.uid,
+            topico: selectedTopic,
+            duracao_segundos: duracaoSessao,
+            criado_em: serverTimestamp()
+          });
+          resetTimer();
+        }
+
+        const revDocRef = doc(db, 'revisoes', revisaoExistente.id);
         await updateDoc(revDocRef, {
           ultimaRevisao: 'Hoje',
           avaliacaoAnterior: `${quality}/5`,
@@ -189,6 +251,7 @@ export default function App() {
           status: 'revisado',
           atualizado_em: serverTimestamp()
         });
+
       } else {
         const duracaoSessao = seconds > 0 ? seconds : 1;
         const resultSM2 = calculateSM2(quality, 1, 1, 2.5);
@@ -273,6 +336,7 @@ export default function App() {
             newTopicName={newTopicName}
             setNewTopicName={setNewTopicName}
             handleAddNewTopic={handleAddNewTopic}
+            handleDeleteTopic={handleDeleteTopic}
             seconds={seconds}
             isActive={isActive}
             toggleTimer={toggleTimer}
@@ -291,6 +355,7 @@ export default function App() {
               setActiveTab('timer');
             }}
             onCompleteReview={handleOpenEvaluationFromQueue}
+            onDeleteReview={handleDeleteReview}
           />
         )}
 
@@ -303,6 +368,7 @@ export default function App() {
         )}
       </main>
 
+      {/* MODAL DE AUTOAVALIAÇÃO SM-2 */}
       {showEvaluationModal && (
         <div 
           onClick={() => {
@@ -354,6 +420,19 @@ export default function App() {
             <div className="flex justify-between text-xs text-slate-500">
               <span>0 - Esqueceu totalmente</span>
               <span>5 - Lembrança perfeita</span>
+            </div>
+
+            <div className="pt-2 border-t border-slate-800 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEvaluationModal(false);
+                  setReviewBeingEvaluated(null);
+                }}
+                className="text-xs text-slate-400 hover:text-rose-400 font-medium transition"
+              >
+                Cancelar e voltar
+              </button>
             </div>
           </div>
         </div>

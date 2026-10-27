@@ -1,147 +1,170 @@
 import React, { useState } from 'react';
 import { auth, db } from '../services/firebase';
 import { 
+  signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword,
-  updateProfile 
+  signInWithPopup, 
+  GoogleAuthProvider 
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { Sparkles, LogIn, UserPlus } from 'lucide-react';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function AuthModal({ onLoginSuccess }) {
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [nome, setNome] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
-  const [erro, setErro] = useState('');
-  const [carregando, setCarregando] = useState(false);
+  const [password, setPassword] = useState('');
+  const [nome, setNome] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const criarPerfilSeNecessario = async (user, nomePadrao) => {
+    const userDocRef = doc(db, 'usuarios', user.uid);
+    const snap = await getDoc(userDocRef);
+    if (!snap.exists()) {
+      await setDoc(userDocRef, {
+        nome: nomePadrao || user.displayName || 'Estudante',
+        email: user.email,
+        nivel: 1,
+        xp: 0,
+        nextLevelXp: 100,
+        revisoesConcluidas: 0,
+        criado_em: serverTimestamp()
+      });
+    }
+  };
+
+  const handleEmailAuth = async (e) => {
     e.preventDefault();
-    setErro('');
-    setCarregando(true);
+    setErrorMsg('');
+    setLoading(true);
 
     try {
-      if (isRegistering) {
-        // Criar usuário no Firebase Auth
-        const credenciais = await createUserWithEmailAndPassword(auth, email, senha);
-        const user = credenciais.user;
-
-        // Atualizar display name
-        await updateProfile(user, { displayName: nome });
-
-        // Criar documento do usuário no Firestore (coleção 'usuarios')
-        await setDoc(doc(db, 'usuarios', user.uid), {
-          uid: user.uid,
-          nome: nome || 'Estudante',
-          email: user.email,
-          nivel: 1,
-          xp: 0,
-          nextLevelXp: 100,
-          criado_em: serverTimestamp()
-        });
-
-        onLoginSuccess(user);
+      if (isSignUp) {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await criarPerfilSeNecessario(userCredential.user, nome);
+        onLoginSuccess(userCredential.user);
       } else {
-        // Login com Firebase Auth
-        const credenciais = await signInWithEmailAndPassword(auth, email, senha);
-        onLoginSuccess(credenciais.user);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        onLoginSuccess(userCredential.user);
       }
     } catch (err) {
       console.error(err);
-      if (err.code === 'auth/email-already-in-use') {
-        setErro('Este e-mail já está cadastrado.');
-      } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setErro('E-mail ou senha inválidos.');
-      } else if (err.code === 'auth/weak-password') {
-        setErro('A senha deve ter pelo menos 6 caracteres.');
-      } else {
-        setErro('Ocorreu um erro ao processar. Tente novamente.');
-      }
+      setErrorMsg('Falha na autenticação. Verifique o seu e-mail e palavra-passe.');
     } finally {
-      setCarregando(false);
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleAuth = async () => {
+    setErrorMsg('');
+    setLoading(true);
+    const provider = new GoogleAuthProvider();
+
+    try {
+      const result = await signInWithPopup(auth, provider);
+      await criarPerfilSeNecessario(result.user);
+      onLoginSuccess(result.user);
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Falha ao autenticar com a conta Google.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
-      <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-md w-full shadow-2xl space-y-6">
+    <div className="fixed inset-0 bg-slate-950 flex items-center justify-center p-4 z-50">
+      <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-sm w-full space-y-6 shadow-2xl">
         <div className="text-center space-y-2">
-          <div className="inline-flex p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-400 mb-2">
-            <Sparkles className="h-8 w-8" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-100">
-            {isRegistering ? 'Criar sua conta' : 'Entrar no OrgaLearn'}
-          </h2>
+          {/* LOGO DA APLICAÇÃO */}
+          <img 
+            src="/logo.png" 
+            alt="OrgaLearn Logo" 
+            className="h-20 w-20 object-contain mx-auto mb-3 drop-shadow-lg"
+          />
+          <h2 className="text-2xl font-black tracking-tight text-slate-100">OrgaLearn</h2>
           <p className="text-xs text-slate-400">
-            Gestão de tempo de estudo e repetição espaçada personalizada.
+            {isSignUp 
+              ? 'Crie a sua conta para iniciar o ciclo de estudos' 
+              : 'Entre para continuar o seu progresso no SM-2'}
           </p>
         </div>
 
-        {erro && (
-          <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs rounded-xl text-center">
-            {erro}
+        {errorMsg && (
+          <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs p-3 rounded-xl text-center">
+            {errorMsg}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {isRegistering && (
+        <form onSubmit={handleEmailAuth} className="space-y-3">
+          {isSignUp && (
             <div>
-              <label className="text-xs text-slate-400 block mb-1 font-medium">Seu Nome</label>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Nome</label>
               <input
                 type="text"
                 required
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
-                placeholder="Ex: Stefany"
-                className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-amber-500"
+                placeholder="Seu nome completo"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-400"
               />
             </div>
           )}
 
           <div>
-            <label className="text-xs text-slate-400 block mb-1 font-medium">E-mail</label>
+            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">E-mail</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="seuemail@exemplo.com"
-              className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-amber-500"
+              placeholder="seu@email.com"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-400"
             />
           </div>
 
           <div>
-            <label className="text-xs text-slate-400 block mb-1 font-medium">Senha</label>
+            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Palavra-passe</label>
             <input
               type="password"
               required
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              placeholder="Mínimo 6 caracteres"
-              className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-amber-500"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-400"
             />
           </div>
 
           <button
             type="submit"
-            disabled={carregando}
-            className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm transition flex items-center justify-center space-x-2 disabled:opacity-50"
+            disabled={loading}
+            className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-sm mt-2 disabled:opacity-50"
           >
-            {isRegistering ? <UserPlus className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}
-            <span>{carregando ? 'Aguarde...' : isRegistering ? 'Cadastrar' : 'Entrar'}</span>
+            {loading ? 'A processar...' : isSignUp ? 'Criar conta' : 'Entrar'}
           </button>
         </form>
 
-        <div className="text-center pt-2 border-t border-slate-800">
+        <div className="relative flex items-center justify-center">
+          <div className="border-t border-slate-800 w-full" />
+          <span className="bg-slate-900 px-2 text-[10px] text-slate-500 uppercase tracking-widest font-bold">ou</span>
+          <div className="border-t border-slate-800 w-full" />
+        </div>
+
+        <button
+          onClick={handleGoogleAuth}
+          disabled={loading}
+          type="button"
+          className="w-full bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 font-semibold py-2.5 rounded-xl transition text-xs flex items-center justify-center space-x-2"
+        >
+          <span>Continuar com Google</span>
+        </button>
+
+        <div className="text-center pt-2">
           <button
             type="button"
-            onClick={() => { setIsRegistering(!isRegistering); setErro(''); }}
-            className="text-xs text-slate-400 hover:text-amber-400 transition"
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="text-xs text-amber-400 hover:underline font-semibold"
           >
-            {isRegistering
-              ? 'Já tem uma conta? Clique para entrar'
-              : 'Não tem conta? Cadastre-se gratuitamente'}
+            {isSignUp ? 'Já tem uma conta? Inicie sessão' : 'Não tem conta? Registe-se agora'}
           </button>
         </div>
       </div>
