@@ -2,6 +2,7 @@ import React from 'react';
 import { 
   Clock, 
   BookOpen, 
+  FolderCheck,
   BarChart2, 
   Award, 
   LogOut 
@@ -20,13 +21,22 @@ export default function Sidebar({ activeTab, setActiveTab, userStats, pendingRev
 
   const menuItems = [
     { id: 'timer', label: 'Estudo Ativo', icon: Clock },
+    { id: 'conteudos', label: 'Conteúdos Estudados', icon: FolderCheck },
     { id: 'revisoes', label: 'Fila de Revisões', icon: BookOpen, badge: pendingReviewsCount },
     { id: 'dashboard', label: 'Dashboard', icon: BarChart2 },
     { id: 'metricas', label: 'Métricas & Análise', icon: Award },
   ];
 
+  // Cálculo do progresso relativo ao nível atual
+  const nivel = userStats.nivel || 1;
+  const xpAtual = userStats.xp || 0;
+  
+  const xpBaseDoNivel = ((nivel - 1) * nivel / 2) * 100;
+  const xpNecessarioNoNivel = nivel * 100;
+  const xpGanhoNoNivel = Math.max(0, xpAtual - xpBaseDoNivel);
+
   const progressoNivel = Math.min(
-    Math.round(((userStats.xp || 0) / (userStats.nextLevelXp || 100)) * 100),
+    Math.round((xpGanhoNoNivel / xpNecessarioNoNivel) * 100),
     100
   );
 
@@ -66,7 +76,7 @@ export default function Sidebar({ activeTab, setActiveTab, userStats, pendingRev
                   <span>{item.label}</span>
                 </div>
                 {item.badge > 0 && (
-                  <span className="bg-amber-500 text-slate-950 text-xs font-bold px-2 py-0.5 rounded-full">
+                  <span className="bg-amber-500 text-slate-950 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm animate-pulse">
                     {item.badge}
                   </span>
                 )}
@@ -81,7 +91,7 @@ export default function Sidebar({ activeTab, setActiveTab, userStats, pendingRev
         <div className="bg-slate-900/80 border border-slate-800 p-3 rounded-2xl space-y-2">
           <div className="flex justify-between items-center text-xs">
             <span className="font-bold text-slate-200">{userStats.nome || 'Estudante'}</span>
-            <span className="text-amber-400 font-bold font-mono">Nv. {userStats.nivel || 1}</span>
+            <span className="text-amber-400 font-bold font-mono">Nv. {nivel}</span>
           </div>
 
           <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
@@ -92,8 +102,8 @@ export default function Sidebar({ activeTab, setActiveTab, userStats, pendingRev
           </div>
 
           <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
-            <span>{userStats.xp || 0} XP</span>
-            <span>{userStats.nextLevelXp || 100} XP</span>
+            <span>{xpGanhoNoNivel} XP</span>
+            <span>{xpNecessarioNoNivel} XP</span>
           </div>
         </div>
 

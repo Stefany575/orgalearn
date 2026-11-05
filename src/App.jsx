@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import StudyTimer from './components/StudyTimer';
 import ReviewsQueue from './components/ReviewsQueue';
+import ContentsView from './components/ContentsView';
 import DashboardView from './components/DashboardView';
 import MetricsView from './components/MetricsView';
 import AuthModal from './components/AuthModal';
@@ -29,7 +30,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('timer');
   
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
-  const [reviewBeingEvaluated, setReviewBeingEvaluated] = useState(null);
+  const [conteudoEspecifico, setConteudoEspecifico] = useState('');
 
   const [userStats, setUserStats] = useState({
     nome: "Estudante",
@@ -42,10 +43,8 @@ export default function App() {
     streak: 1
   });
 
-  const [topicos, setTopicos] = useState([]);
-  const [selectedTopic, setSelectedTopic] = useState('');
-  const [isAddingNewTopic, setIsAddingNewTopic] = useState(false);
-  const [newTopicName, setNewTopicName] = useState('');
+  const [materias, setMaterias] = useState([]);
+  const [selectedMateria, setSelectedMateria] = useState('');
   const [revisoes, setRevisoes] = useState([]);
   const [sessoes, setSessoes] = useState([]);
 
@@ -75,14 +74,14 @@ export default function App() {
       }
     });
 
-    const qTopicos = query(collection(db, 'topicos'), where('usuario_id', '==', user.uid));
-    const unsubTopicos = onSnapshot(qTopicos, (snapshot) => {
-      const topicosList = snapshot.docs.map(doc => doc.data().titulo);
-      setTopicos(topicosList);
-      if (topicosList.length > 0 && !selectedTopic) {
-        setSelectedTopic(topicosList[0]);
-      } else if (topicosList.length === 0) {
-        setSelectedTopic('');
+    const qMaterias = query(collection(db, 'materias'), where('usuario_id', '==', user.uid));
+    const unsubMaterias = onSnapshot(qMaterias, (snapshot) => {
+      const lista = snapshot.docs.map(d => d.data().nome);
+      setMaterias(lista);
+      if (lista.length > 0 && !selectedMateria) {
+        setSelectedMateria(lista[0]);
+      } else if (lista.length === 0) {
+        setSelectedMateria('');
       }
     });
 
@@ -110,12 +109,8 @@ export default function App() {
         const dataFormatada = dataSessao.toISOString().split('T')[0];
         const seg = Number(s.duracao_segundos) || 0;
 
-        if (dataFormatada === hojeFormatado) {
-          totalHojeSegundos += seg;
-        }
-        if (dataSessao >= seteDiasAtras) {
-          totalSemanaSegundos += seg;
-        }
+        if (dataFormatada === hojeFormatado) totalHojeSegundos += seg;
+        if (dataSessao >= seteDiasAtras) totalSemanaSegundos += seg;
       });
 
       const formataSegundos = (segundos) => {
@@ -133,62 +128,62 @@ export default function App() {
 
     return () => {
       unsubUser();
-      unsubTopicos();
+      unsubMaterias();
       unsubRevisoes();
       unsubSessoes();
     };
-  }, [user, selectedTopic]);
+  }, [user, selectedMateria]);
 
   const { seconds, isActive, toggleTimer, resetTimer, formatTime } = useTimer();
 
-  const handleAddNewTopic = async (e) => {
-    e.preventDefault();
-    if (!newTopicName.trim() || !user) return;
+  // Contagem estrita de revisões que NÃO FORAM FEITAS no dia que precisava (atrasadas/vencidas)
+  const hojeStr = new Date().toISOString().split('T')[0];
+  const pendingReviewsCount = revisoes.filter((r) => {
+    if (!r.dataVencimento) return false;
+    return r.dataVencimento <= hojeStr;
+  }).length;
 
-    const formatted = newTopicName.trim();
+  const handleAddNewMateria = async (nome) => {
+    if (!user || !nome) return;
     try {
-      await addDoc(collection(db, 'topicos'), {
+      await addDoc(collection(db, 'materias'), {
         usuario_id: user.uid,
-        titulo: formatted,
+        nome,
         criado_em: serverTimestamp()
       });
-      setSelectedTopic(formatted);
-      setNewTopicName('');
-      setIsAddingNewTopic(false);
+      setSelectedMateria(nome);
     } catch (err) {
-      console.error('Erro ao adicionar tópico:', err);
+      console.error('Erro ao adicionar matéria:', err);
     }
   };
 
-  // EXCLUIR TÓPICO DO FIRESTORE
-  const handleDeleteTopic = async (topicTitle) => {
-    if (!user || !topicTitle) return;
-    const confirmacao = window.confirm(`Deseja realmente excluir o tópico "${topicTitle}"?`);
+  const handleDeleteMateria = async (materiaNome) => {
+    if (!user || !materiaNome) return;
+    const confirmacao = window.confirm(`Deseja realmente excluir a matéria "${materiaNome}"?`);
     if (!confirmacao) return;
 
     try {
       const q = query(
-        collection(db, 'topicos'), 
+        collection(db, 'materias'), 
         where('usuario_id', '==', user.uid), 
-        where('titulo', '==', topicTitle)
+        where('nome', '==', materiaNome)
       );
       const snapshot = await getDocs(q);
-      const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'topicos', d.id)));
+      const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'materias', d.id)));
       await Promise.all(deletePromises);
 
-      if (selectedTopic === topicTitle) {
-        const restantes = topicos.filter(t => t !== topicTitle);
-        setSelectedTopic(restantes.length > 0 ? restantes[0] : '');
+      if (selectedMateria === materiaNome) {
+        const restantes = materias.filter(m => m !== materiaNome);
+        setSelectedMateria(restantes.length > 0 ? restantes[0] : '');
       }
     } catch (err) {
-      console.error('Erro ao excluir tópico:', err);
+      console.error('Erro ao excluir matéria:', err);
     }
   };
 
-  // EXCLUIR TODAS AS REVISÕES DO ASSUNTO
   const handleDeleteReview = async (review) => {
     if (!user || !review?.topico) return;
-    const confirmacao = window.confirm(`Deseja remover todas as revisões agendadas para "${review.topico}"?`);
+    const confirmacao = window.confirm(`Deseja remover as revisões agendadas para "${review.topico}"?`);
     if (!confirmacao) return;
 
     try {
@@ -206,21 +201,28 @@ export default function App() {
   };
 
   const handleOpenEvaluationFromTimer = () => {
-    setReviewBeingEvaluated(null);
-    setShowEvaluationModal(true);
-  };
-
-  const handleOpenEvaluationFromQueue = (review) => {
-    setReviewBeingEvaluated(review);
-    setSelectedTopic(review.topico);
     setShowEvaluationModal(true);
   };
 
   const handleSM2Submit = async (quality) => {
-    if (!user || !selectedTopic) return;
+    if (!user || !selectedMateria) return;
+
+    const topicoFinal = conteudoEspecifico.trim() || selectedMateria;
+    const duracaoSessao = seconds > 0 ? seconds : 1;
 
     try {
-      const revisaoExistente = reviewBeingEvaluated || revisoes.find(r => r.topico === selectedTopic);
+      const revisaoExistente = revisoes.find(r => r.topico === topicoFinal && (r.materia === selectedMateria || !r.materia));
+
+      await addDoc(collection(db, 'sessoes'), {
+        usuario_id: user.uid,
+        materia: selectedMateria,
+        topico: topicoFinal,
+        conteudoEspecifico: topicoFinal,
+        duracao_segundos: duracaoSessao,
+        notaSM2: quality,
+        criado_em: serverTimestamp()
+      });
+      resetTimer();
 
       if (revisaoExistente) {
         const repeticaoAtual = (revisaoExistente.repeticoes || 1) + 1;
@@ -229,43 +231,36 @@ export default function App() {
 
         const resultSM2 = calculateSM2(quality, repeticaoAtual, intervaloAnterior, efAtual);
 
-        if (!reviewBeingEvaluated) {
-          const duracaoSessao = seconds > 0 ? seconds : 1;
-          await addDoc(collection(db, 'sessoes'), {
-            usuario_id: user.uid,
-            topico: selectedTopic,
-            duracao_segundos: duracaoSessao,
-            criado_em: serverTimestamp()
-          });
-          resetTimer();
-        }
+        // Calcula a data exata de vencimento
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + resultSM2.interval);
+        const dataVencimentoStr = targetDate.toISOString().split('T')[0];
 
         const revDocRef = doc(db, 'revisoes', revisaoExistente.id);
         await updateDoc(revDocRef, {
+          materia: selectedMateria,
+          topico: topicoFinal,
           ultimaRevisao: 'Hoje',
           avaliacaoAnterior: `${quality}/5`,
           ef: resultSM2.easinessFactor,
           intervalo_dias: resultSM2.interval,
           repeticoes: resultSM2.repetitions,
           proximaData: `em ${resultSM2.interval} dia(s)`,
+          dataVencimento: dataVencimentoStr,
           status: 'revisado',
           atualizado_em: serverTimestamp()
         });
-
       } else {
-        const duracaoSessao = seconds > 0 ? seconds : 1;
         const resultSM2 = calculateSM2(quality, 1, 1, 2.5);
 
-        await addDoc(collection(db, 'sessoes'), {
-          usuario_id: user.uid,
-          topico: selectedTopic,
-          duracao_segundos: duracaoSessao,
-          criado_em: serverTimestamp()
-        });
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + resultSM2.interval);
+        const dataVencimentoStr = targetDate.toISOString().split('T')[0];
 
         await addDoc(collection(db, 'revisoes'), {
           usuario_id: user.uid,
-          topico: selectedTopic,
+          materia: selectedMateria,
+          topico: topicoFinal,
           ultimaRevisao: 'Hoje',
           avaliacaoAnterior: `${quality}/5`,
           ef: resultSM2.easinessFactor,
@@ -273,26 +268,29 @@ export default function App() {
           repeticoes: 1,
           status: 'agendado',
           proximaData: `em ${resultSM2.interval} dia(s)`,
+          dataVencimento: dataVencimentoStr,
           criado_em: serverTimestamp()
         });
-
-        resetTimer();
       }
 
-      const novoXP = userStats.xp + 18;
-      let novoNivel = userStats.nivel;
-      let proxXP = userStats.nextLevelXp;
+      // 1 XP a cada 5 minutos
+      const minutosEstudados = Math.floor(duracaoSessao / 60);
+      const xpGanhos = Math.max(1, Math.floor(minutosEstudados / 5));
 
-      if (novoXP >= proxXP) {
+      let novoXP = (userStats.xp || 0) + xpGanhos;
+      let novoNivel = userStats.nivel || 1;
+      let metaAcumulada = userStats.nextLevelXp || 100;
+
+      while (novoXP >= metaAcumulada) {
         novoNivel += 1;
-        proxXP += 150;
+        metaAcumulada += novoNivel * 100;
       }
 
       const userDocRef = doc(db, 'usuarios', user.uid);
       await updateDoc(userDocRef, {
         xp: novoXP,
         nivel: novoNivel,
-        nextLevelXp: proxXP,
+        nextLevelXp: metaAcumulada,
         revisoesConcluidas: (userStats.revisoesConcluidas || 0) + 1
       });
 
@@ -300,7 +298,7 @@ export default function App() {
       console.error('Erro ao processar SM-2 no Firestore:', err);
     }
 
-    setReviewBeingEvaluated(null);
+    setConteudoEspecifico('');
     setShowEvaluationModal(false);
   };
 
@@ -322,21 +320,17 @@ export default function App() {
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         userStats={userStats} 
-        pendingReviewsCount={revisoes.length} 
+        pendingReviewsCount={pendingReviewsCount} 
       />
 
       <main className="flex-1 overflow-y-auto p-8">
         {activeTab === 'timer' && (
           <StudyTimer 
-            selectedTopic={selectedTopic}
-            setSelectedTopic={setSelectedTopic}
-            topicos={topicos}
-            isAddingNewTopic={isAddingNewTopic}
-            setIsAddingNewTopic={setIsAddingNewTopic}
-            newTopicName={newTopicName}
-            setNewTopicName={setNewTopicName}
-            handleAddNewTopic={handleAddNewTopic}
-            handleDeleteTopic={handleDeleteTopic}
+            selectedMateria={selectedMateria}
+            setSelectedMateria={setSelectedMateria}
+            materias={materias}
+            handleAddNewMateria={handleAddNewMateria}
+            handleDeleteMateria={handleDeleteMateria}
             seconds={seconds}
             isActive={isActive}
             toggleTimer={toggleTimer}
@@ -347,14 +341,18 @@ export default function App() {
           />
         )}
 
+        {activeTab === 'conteudos' && (
+          <ContentsView sessoes={sessoes} />
+        )}
+
         {activeTab === 'revisoes' && (
           <ReviewsQueue 
             revisoes={revisoes} 
-            onReviewNow={(topico) => {
-              setSelectedTopic(topico);
+            onReviewNow={(materia, topico) => {
+              setSelectedMateria(materia);
+              setConteudoEspecifico(topico);
               setActiveTab('timer');
             }}
-            onCompleteReview={handleOpenEvaluationFromQueue}
             onDeleteReview={handleDeleteReview}
           />
         )}
@@ -368,70 +366,79 @@ export default function App() {
         )}
       </main>
 
-      {/* MODAL DE AUTOAVALIAÇÃO SM-2 */}
+      {/* MODAL DE AUTOAVALIAÇÃO & CONTEÚDO */}
       {showEvaluationModal && (
         <div 
-          onClick={() => {
-            setShowEvaluationModal(false);
-            setReviewBeingEvaluated(null);
-          }}
+          onClick={() => setShowEvaluationModal(false)}
           className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 cursor-pointer"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-md w-full space-y-6 shadow-2xl relative cursor-default"
+            className="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-md w-full space-y-5 shadow-2xl relative cursor-default"
           >
             <button
-              onClick={() => {
-                setShowEvaluationModal(false);
-                setReviewBeingEvaluated(null);
-              }}
+              onClick={() => setShowEvaluationModal(false)}
               title="Cancelar e fechar"
               className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded-lg transition"
             >
               <X className="h-5 w-5" />
             </button>
 
-            <div className="text-center space-y-2 pr-4">
+            <div className="space-y-1 pr-6">
               <h3 className="text-xl font-bold text-slate-100">
-                {reviewBeingEvaluated ? 'Como foi a sua revisão?' : 'Como foi o seu desempenho?'}
+                Concluir Sessão de Estudo Ativo
               </h3>
               <p className="text-xs text-slate-400">
-                Sua nota atualizará o cálculo do SM-2 para <b className="text-amber-400">{selectedTopic || 'o tópico'}</b>.
+                Matéria: <b className="text-amber-400">{selectedMateria}</b>
               </p>
             </div>
 
-            <div className="grid grid-cols-6 gap-2">
-              {[0, 1, 2, 3, 4, 5].map((nota) => (
-                <button
-                  key={nota}
-                  onClick={() => handleSM2Submit(nota)}
-                  className={`p-3 rounded-xl border font-bold text-base transition ${
-                    nota < 3 
-                      ? 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20' 
-                      : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
-                  }`}
-                >
-                  {nota}
-                </button>
-              ))}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-300">
+                Conteúdo específico estudado:
+              </label>
+              <input
+                type="text"
+                autoFocus
+                value={conteudoEspecifico}
+                onChange={(e) => setConteudoEspecifico(e.target.value)}
+                placeholder="Ex: Diagramas de Sequência, Integrais por Partes..."
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-400"
+              />
             </div>
 
-            <div className="flex justify-between text-xs text-slate-500">
-              <span>0 - Esqueceu totalmente</span>
-              <span>5 - Lembrança perfeita</span>
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-slate-300">
+                Como avalia a sua retenção neste conteúdo?
+              </label>
+              <div className="grid grid-cols-6 gap-2">
+                {[0, 1, 2, 3, 4, 5].map((nota) => (
+                  <button
+                    key={nota}
+                    onClick={() => handleSM2Submit(nota)}
+                    className={`p-3 rounded-xl border font-bold text-base transition ${
+                      nota < 3 
+                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20' 
+                        : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+                    }`}
+                  >
+                    {nota}
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-between text-[11px] text-slate-500">
+                <span>0 - Esqueci tudo</span>
+                <span>5 - Domínio total</span>
+              </div>
             </div>
 
             <div className="pt-2 border-t border-slate-800 text-center">
               <button
                 type="button"
-                onClick={() => {
-                  setShowEvaluationModal(false);
-                  setReviewBeingEvaluated(null);
-                }}
+                onClick={() => setShowEvaluationModal(false)}
                 className="text-xs text-slate-400 hover:text-rose-400 font-medium transition"
               >
-                Cancelar e voltar
+                Cancelar e voltar ao cronômetro
               </button>
             </div>
           </div>
