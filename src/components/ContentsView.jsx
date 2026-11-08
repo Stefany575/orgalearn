@@ -1,131 +1,126 @@
-import React, { useMemo } from 'react';
-import { Folder, BookOpen, Clock, Calendar, CheckCircle2 } from 'lucide-react';
+import { useMemo } from 'react';
+import { Folder, Clock, Calendar, CheckCircle2 } from 'lucide-react';
 
 export default function ContentsView({ sessoes = [] }) {
-  // Agrupa as sessões por Matéria Principal
+  // Agrupar e ordenar sessões por matéria (da mais recente para a mais antiga)
   const materiasAgrupadas = useMemo(() => {
     const mapa = {};
 
-    sessoes.forEach((s) => {
-      const matNome = s.materia || s.topico || 'Geral';
-      if (!mapa[matNome]) {
-        mapa[matNome] = {
-          nome: matNome,
-          totalSegundos: 0,
-          conteudos: []
-        };
-      }
-
-      const duracao = Number(s.duracao_segundos) || 0;
-      mapa[matNome].totalSegundos += duracao;
-
-      // Formata a data e hora do estudo
-      let dataFormatada = 'Data recente';
-      if (s.criado_em) {
-        const d = s.criado_em.toDate ? s.criado_em.toDate() : new Date(s.criado_em);
-        dataFormatada = d.toLocaleDateString('pt-BR', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-      }
-
-      mapa[matNome].conteudos.push({
-        id: s.id,
-        conteudo: s.conteudoEspecifico || s.topico || 'Sessão geral',
-        nota: s.notaSM2 !== undefined ? s.notaSM2 : null,
-        data: dataFormatada,
-        duracaoFormatada: `${Math.floor(duracao / 60)} min`
-      });
+    // Ordenar todas as sessões por data decrescente (mais recente primeiro)
+    const sessoesOrdenadas = [...sessoes].sort((a, b) => {
+      const dataA = a.criado_em?.toDate ? a.criado_em.toDate() : new Date(a.criado_em || 0);
+      const dataB = b.criado_em?.toDate ? b.criado_em.toDate() : new Date(b.criado_em || 0);
+      return dataB - dataA; // Mais recente primeiro
     });
 
-    return Object.values(mapa).sort((a, b) => b.totalSegundos - a.totalSegundos);
+    sessoesOrdenadas.forEach((s) => {
+      const materia = s.materia || 'Geral';
+      if (!mapa[materia]) {
+        mapa[materia] = {
+          nome: materia,
+          totalSegundos: 0,
+          registros: []
+        };
+      }
+      mapa[materia].totalSegundos += Number(s.duracao_segundos) || 0;
+      mapa[materia].registros.push(s);
+    });
+
+    return Object.values(mapa);
   }, [sessoes]);
 
-  const formatarHorasTotal = (seg) => {
-    const h = Math.floor(seg / 3600);
-    const m = Math.floor((seg % 3600) / 60);
+  const formatarTempoTotal = (segundos) => {
+    const h = Math.floor(segundos / 3600);
+    const m = Math.floor((segundos % 3600) / 60);
     return `${h}h ${m.toString().padStart(2, '0')}m`;
   };
 
+  const formatarData = (timestamp) => {
+    if (!timestamp) return 'Data recente';
+    const data = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    if (isNaN(data.getTime())) return 'Data recente';
+    return data.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 max-w-4xl mx-auto">
       <div>
         <h2 className="text-3xl font-extrabold text-slate-100">Histórico de Conteúdos</h2>
         <p className="text-slate-400 text-sm mt-1">
-          Visão consolidada de todas as matérias e tópicos específicos estudados com suas respectivas datas.
+          Visão consolidada de todas as matérias e tópicos específicos estudados.
         </p>
       </div>
 
       {materiasAgrupadas.length === 0 ? (
-        <div className="bg-slate-800/80 p-8 rounded-2xl border border-slate-700/60 text-center space-y-3">
-          <BookOpen className="h-10 w-10 text-slate-600 mx-auto" />
-          <p className="text-slate-300 font-semibold text-base">Nenhum conteúdo registrado ainda!</p>
-          <p className="text-slate-500 text-xs">
-            Inicie uma sessão no cronômetro para registrar matérias e conteúdos estudados.
-          </p>
+        <div className="bg-slate-800/80 border border-slate-700/60 p-12 rounded-3xl text-center space-y-3">
+          <Folder className="h-12 w-12 text-slate-600 mx-auto" />
+          <p className="text-sm text-slate-400 font-medium">Nenhum conteúdo estudado registado ainda.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {materiasAgrupadas.map((materia) => (
-            <div
-              key={materia.nome}
-              className="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-5 space-y-4 shadow-lg hover:border-slate-600 transition"
+        <div className="space-y-6">
+          {materiasAgrupadas.map((mat) => (
+            <div 
+              key={mat.nome} 
+              className="bg-slate-800/80 border border-slate-700/60 p-6 rounded-3xl space-y-6 shadow-xl"
             >
-              <div className="flex items-center justify-between border-b border-slate-700/60 pb-3">
-                <div className="flex items-center space-x-2">
-                  <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400">
-                    <Folder className="h-5 w-5" />
+              {/* Cabeçalho da Matéria */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-700/60 pb-4 gap-2">
+                <div className="flex items-center space-x-3">
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-400">
+                    <Folder className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-100 text-base">{materia.nome}</h3>
-                    <p className="text-[11px] text-slate-400">
-                      {materia.conteudos.length} registro(s) realizado(s)
-                    </p>
+                    <h3 className="text-xl font-black text-slate-100 tracking-tight">{mat.nome}</h3>
+                    <p className="text-xs text-slate-400 font-medium">{mat.registros.length} registo(s) realizado(s)</p>
                   </div>
                 </div>
 
-                <div className="text-right">
-                  <span className="text-xs font-mono font-bold text-amber-400">
-                    {formatarHorasTotal(materia.totalSegundos)}
-                  </span>
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider">Tempo total</p>
+                <div className="text-left sm:text-right bg-slate-900/60 border border-slate-700/40 px-4 py-2 rounded-xl">
+                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tempo Total</span>
+                  <span className="text-sm font-mono font-bold text-amber-400">{formatarTempoTotal(mat.totalSegundos)}</span>
                 </div>
               </div>
 
-              {/* Lista dos conteúdos específicos */}
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                {materia.conteudos.map((item, idx) => (
-                  <div
-                    key={item.id || idx}
-                    className="bg-slate-900/60 border border-slate-700/40 p-3 rounded-xl flex items-center justify-between text-xs hover:border-slate-600 transition"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center space-x-2">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 flex-shrink-0" />
-                        <span className="font-semibold text-slate-200">{item.conteudo}</span>
+              {/* Lista de Registos (Já ordenada do mais recente para o mais antigo) */}
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                {mat.registros.map((reg, idx) => {
+                  const minutos = Math.round((Number(reg.duracao_segundos) || 0) / 60);
+                  return (
+                    <div 
+                      key={reg.id || idx}
+                      className="bg-slate-900/90 border border-slate-700/50 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-600 transition"
+                    >
+                      <div className="flex items-start space-x-3">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-slate-200 text-sm">{reg.conteudoEspecifico || reg.topico || mat.nome}</h4>
+                          <div className="flex items-center space-x-4 text-xs text-slate-400">
+                            <span className="flex items-center space-x-1">
+                              <Calendar className="h-3.5 w-3.5 text-slate-500" />
+                              <span>{formatarData(reg.criado_em)}</span>
+                            </span>
+                            <span className="flex items-center space-x-1 font-mono text-slate-300">
+                              <Clock className="h-3.5 w-3.5 text-slate-500" />
+                              <span>{minutos} min</span>
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-3 text-[11px] text-slate-500">
-                        <span className="flex items-center space-x-1">
-                          <Calendar className="h-3 w-3" />
-                          <span>{item.data}</span>
-                        </span>
-                        <span className="flex items-center space-x-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{item.duracaoFormatada}</span>
-                        </span>
-                      </div>
-                    </div>
 
-                    {item.nota !== null && (
-                      <span className="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 font-mono text-[11px]">
-                        Nota {item.nota}/5
-                      </span>
-                    )}
-                  </div>
-                ))}
+                      {reg.nota_facilidade && (
+                        <div className="self-end sm:self-center bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-400">
+                          Nota {reg.nota_facilidade}/5
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}

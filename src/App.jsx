@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import StudyTimer from './components/StudyTimer';
 import ReviewsQueue from './components/ReviewsQueue';
@@ -10,6 +10,7 @@ import { useTimer } from './hooks/useTimer';
 import { calculateSM2 } from './utils/sm2';
 import { auth, db } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { X } from 'lucide-react';
 import { 
   collection, 
@@ -36,7 +37,7 @@ export default function App() {
     nome: "Estudante",
     nivel: 1,
     xp: 0,
-    nextLevelXp: 100,
+    nextLevelXp: 1000, // Meta inicial de 1000 XP por nível
     totalHorasHoje: "0h 00m",
     totalHorasSemana: "0h 00m",
     revisoesConcluidas: 0,
@@ -68,7 +69,7 @@ export default function App() {
           nome: data.nome || user.displayName || 'Estudante',
           nivel: data.nivel || 1,
           xp: data.xp || 0,
-          nextLevelXp: data.nextLevelXp || 100,
+          nextLevelXp: data.nextLevelXp || 1000,
           revisoesConcluidas: data.revisoesConcluidas || 0
         }));
       }
@@ -136,7 +137,6 @@ export default function App() {
 
   const { seconds, isActive, toggleTimer, resetTimer, formatTime } = useTimer();
 
-  // Contagem estrita de revisões que NÃO FORAM FEITAS no dia que precisava (atrasadas/vencidas)
   const hojeStr = new Date().toISOString().split('T')[0];
   const pendingReviewsCount = revisoes.filter((r) => {
     if (!r.dataVencimento) return false;
@@ -208,7 +208,7 @@ export default function App() {
     if (!user || !selectedMateria) return;
 
     const topicoFinal = conteudoEspecifico.trim() || selectedMateria;
-    const duracaoSessao = seconds > 0 ? seconds : 1;
+    const duracaoSessao = seconds > 0 ? seconds : 60; // Mínimo de 1 minuto para contar
 
     try {
       const revisaoExistente = revisoes.find(r => r.topico === topicoFinal && (r.materia === selectedMateria || !r.materia));
@@ -231,7 +231,6 @@ export default function App() {
 
         const resultSM2 = calculateSM2(quality, repeticaoAtual, intervaloAnterior, efAtual);
 
-        // Calcula a data exata de vencimento
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + resultSM2.interval);
         const dataVencimentoStr = targetDate.toISOString().split('T')[0];
@@ -260,7 +259,7 @@ export default function App() {
         await addDoc(collection(db, 'revisoes'), {
           usuario_id: user.uid,
           materia: selectedMateria,
-          topico: topicoFinal,
+            topico: topicoFinal,
           ultimaRevisao: 'Hoje',
           avaliacaoAnterior: `${quality}/5`,
           ef: resultSM2.easinessFactor,
@@ -273,24 +272,25 @@ export default function App() {
         });
       }
 
-      // 1 XP a cada 5 minutos
-      const minutosEstudados = Math.floor(duracaoSessao / 60);
-      const xpGanhos = Math.max(1, Math.floor(minutosEstudados / 5));
+      // NOVA REGRA DE XP: 1 XP por minuto estudado, 1000 XP por nível
+      const minutosEstudados = Math.max(1, Math.floor(duracaoSessao / 60));
+      const xpGanhos = minutosEstudados; // 1 XP por minuto
 
       let novoXP = (userStats.xp || 0) + xpGanhos;
       let novoNivel = userStats.nivel || 1;
-      let metaAcumulada = userStats.nextLevelXp || 100;
+      let metaAtual = userStats.nextLevelXp || 1000;
 
-      while (novoXP >= metaAcumulada) {
+      // Subida de nível baseada em blocos de 1000 XP
+      while (novoXP >= metaAtual) {
         novoNivel += 1;
-        metaAcumulada += novoNivel * 100;
+        metaAtual += 1000;
       }
 
       const userDocRef = doc(db, 'usuarios', user.uid);
       await updateDoc(userDocRef, {
         xp: novoXP,
         nivel: novoNivel,
-        nextLevelXp: metaAcumulada,
+        nextLevelXp: metaAtual,
         revisoesConcluidas: (userStats.revisoesConcluidas || 0) + 1
       });
 
@@ -321,6 +321,14 @@ export default function App() {
         setActiveTab={setActiveTab} 
         userStats={userStats} 
         pendingReviewsCount={pendingReviewsCount} 
+        onLogout={async () => {
+         try {
+            await signOut(auth);
+            resetTimer();
+          } catch (err) {
+            console.error("Erro ao encerrar sessão:", err);
+          }
+        }}
       />
 
       <main className="flex-1 overflow-y-auto p-8">
@@ -366,7 +374,6 @@ export default function App() {
         )}
       </main>
 
-      {/* MODAL DE AUTOAVALIAÇÃO & CONTEÚDO */}
       {showEvaluationModal && (
         <div 
           onClick={() => setShowEvaluationModal(false)}
@@ -402,7 +409,7 @@ export default function App() {
                 autoFocus
                 value={conteudoEspecifico}
                 onChange={(e) => setConteudoEspecifico(e.target.value)}
-                placeholder="Ex: Diagramas de Sequência, Integrais por Partes..."
+                placeholder="Ex: Diagramas de Sequência, Normalização..."
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-400"
               />
             </div>

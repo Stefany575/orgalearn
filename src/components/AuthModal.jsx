@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { auth, db } from '../services/firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -85,7 +85,7 @@ export default function AuthModal({ onLoginSuccess }) {
           <p className="text-xs text-slate-400">
             {isSignUp 
               ? 'Crie a sua conta para iniciar o ciclo de estudos' 
-              : 'Entre para continuar o seu progresso no SM-2'}
+              : 'Entre para iniciar seu controle de estudos'}
           </p>
         </div>
 

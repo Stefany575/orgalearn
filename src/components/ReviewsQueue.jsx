@@ -1,8 +1,7 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { BookOpen, Clock, Calendar, Folder, RotateCw, Trash2 } from 'lucide-react';
 
 export default function ReviewsQueue({ revisoes = [], onReviewNow, onDeleteReview }) {
-  // Agrupa todas as revisões pela Matéria Principal
   const materiasAgrupadas = useMemo(() => {
     const mapa = {};
 
@@ -25,7 +24,7 @@ export default function ReviewsQueue({ revisoes = [], onReviewNow, onDeleteRevie
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-extrabold text-slate-100">Fila de Revisões (SM-2)</h2>
+        <h2 className="text-3xl font-extrabold text-slate-100">Fila de Revisões</h2>
         <p className="text-slate-400 text-sm mt-1">
           Tópicos organizados por matéria. Para revisar e atualizar o algoritmo, inicie uma sessão no cronômetro.
         </p>
@@ -46,7 +45,6 @@ export default function ReviewsQueue({ revisoes = [], onReviewNow, onDeleteRevie
               key={grupo.materia}
               className="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-5 space-y-4 shadow-lg"
             >
-              {/* Cabeçalho da Matéria */}
               <div className="flex items-center justify-between border-b border-slate-700/60 pb-3">
                 <div className="flex items-center space-x-2.5">
                   <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400">
@@ -61,7 +59,6 @@ export default function ReviewsQueue({ revisoes = [], onReviewNow, onDeleteRevie
                 </div>
               </div>
 
-              {/* Lista de conteúdos específicos da matéria */}
               <div className="space-y-3">
                 {grupo.itens.map((rev) => (
                   <div

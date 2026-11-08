@@ -1,16 +1,37 @@
-# React + Vite
+# OrgaLearn 📚⏱️
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+O **OrgaLearn** é uma aplicação web desenvolvida como projeto final de curso em Análise e Desenvolvimento de Sistemas na Unisinos, com o objetivo de otimizar a rotina de estudos através da combinação de um cronômetro de foco, sistema de repetição espaçada (SRS), gamificação com ganho de XP e métricas detalhadas de desempenho.
 
-Currently, two official plugins are available:
+## 🚀 Principais Funcionalidades
+- **Estudo Ativo & Cronômetro:** Registo de sessões de estudo por matéria com contagem de tempo progressiva.
+- **Repetição Espaçada:** Fila de revisões automáticas baseada no desempenho e notas de facilidade do utilizador.
+- **Gamificação:** Sistema de níveis e barras de progresso baseadas em XP conquistado com o tempo de estudo.
+- **Histórico & Métricas:** Gráficos interativos e visão consolidada dos conteúdos e disciplinas estudadas.
+- **Base de Dados em Tempo Real:** Integração completa com o Firebase Firestore e Firebase Authentication.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🛠️ Tecnologias Utilizadas
+- **Frontend:** React, Tailwind CSS, Lucide React, Recharts
+- **Backend & Auth:** Firebase (Authentication & Cloud Firestore)
+- **Ferramentas:** Vite
 
-## React Compiler
+## ⚙️ Como Executar o Projeto Localmente
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Clona este repositório:
+   ```bash
+   git clone [https://github.com/teu-utilizador/orgalearn.git](https://github.com/teu-utilizador/orgalearn.git)
 
-## Expanding the Oxlint configuration
+2. Entra na pasta do projeto:
+    ```bash
+    cd orgalearn
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+3. Instala as dependência:
+    ```bash
+    npm install
+
+4. Configura as tuas credenciais do Firebase num ficheiro de ambiente (.env).
+
+5. Inicia o servidor de desenvolvimento:
+    ```npm run dev
+
+## 👩‍💻 Desenvolvida por
+**Stefany Natacha Szynwelski** — Análise e Desenvolvimento de Sistemas (Unisinos).
