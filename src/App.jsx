@@ -12,6 +12,7 @@ import { auth, db } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { signOut } from 'firebase/auth';
 import { X } from 'lucide-react';
+import { atualizarOfensiva } from './services/dataService';
 import { 
   collection, 
   query, 
@@ -29,6 +30,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('timer');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
   const [conteudoEspecifico, setConteudoEspecifico] = useState('');
@@ -37,11 +39,11 @@ export default function App() {
     nome: "Estudante",
     nivel: 1,
     xp: 0,
-    nextLevelXp: 1000, // Meta inicial de 1000 XP por nível
+    nextLevelXp: 1000, 
     totalHorasHoje: "0h 00m",
     totalHorasSemana: "0h 00m",
     revisoesConcluidas: 0,
-    streak: 1
+    diasOfensiva: 1
   });
 
   const [materias, setMaterias] = useState([]);
@@ -70,7 +72,8 @@ export default function App() {
           nivel: data.nivel || 1,
           xp: data.xp || 0,
           nextLevelXp: data.nextLevelXp || 1000,
-          revisoesConcluidas: data.revisoesConcluidas || 0
+          revisoesConcluidas: data.revisoesConcluidas || 0,
+          diasOfensiva: data.diasOfensiva || 1
         }));
       }
     });
@@ -208,7 +211,7 @@ export default function App() {
     if (!user || !selectedMateria) return;
 
     const topicoFinal = conteudoEspecifico.trim() || selectedMateria;
-    const duracaoSessao = seconds > 0 ? seconds : 60; // Mínimo de 1 minuto para contar
+    const duracaoSessao = seconds > 0 ? seconds : 60; 
 
     try {
       const revisaoExistente = revisoes.find(r => r.topico === topicoFinal && (r.materia === selectedMateria || !r.materia));
@@ -259,7 +262,7 @@ export default function App() {
         await addDoc(collection(db, 'revisoes'), {
           usuario_id: user.uid,
           materia: selectedMateria,
-            topico: topicoFinal,
+          topico: topicoFinal,
           ultimaRevisao: 'Hoje',
           avaliacaoAnterior: `${quality}/5`,
           ef: resultSM2.easinessFactor,
@@ -272,15 +275,17 @@ export default function App() {
         });
       }
 
-      // NOVA REGRA DE XP: 1 XP por minuto estudado, 1000 XP por nível
+      // ATUALIZA OS DIAS DE OFENSIVA NO FIRESTORE AO CONCLUIR O ESTUDO
+      await atualizarOfensiva(user.uid);
+
+      // CÁLCULO DE XP
       const minutosEstudados = Math.max(1, Math.floor(duracaoSessao / 60));
-      const xpGanhos = minutosEstudados; // 1 XP por minuto
+      const xpGanhos = minutosEstudados; 
 
       let novoXP = (userStats.xp || 0) + xpGanhos;
       let novoNivel = userStats.nivel || 1;
       let metaAtual = userStats.nextLevelXp || 1000;
 
-      // Subida de nível baseada em blocos de 1000 XP
       while (novoXP >= metaAtual) {
         novoNivel += 1;
         metaAtual += 1000;
@@ -315,12 +320,15 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-900 text-slate-100 font-sans">
+    <div className="flex h-screen bg-slate-900 text-slate-100 font-sans overflow-hidden">
+      {/* Sidebar Responsiva (Gaveta no telemóvel e fixa no PC) */}
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         userStats={userStats} 
         pendingReviewsCount={pendingReviewsCount} 
+        isOpen={isSidebarOpen}
+        setIsOpen={setIsSidebarOpen}
         onLogout={async () => {
          try {
             await signOut(auth);
@@ -331,48 +339,72 @@ export default function App() {
         }}
       />
 
-      <main className="flex-1 overflow-y-auto p-8">
-        {activeTab === 'timer' && (
-          <StudyTimer 
-            selectedMateria={selectedMateria}
-            setSelectedMateria={setSelectedMateria}
-            materias={materias}
-            handleAddNewMateria={handleAddNewMateria}
-            handleDeleteMateria={handleDeleteMateria}
-            seconds={seconds}
-            isActive={isActive}
-            toggleTimer={toggleTimer}
-            resetTimer={resetTimer}
-            formatTime={formatTime}
-            onOpenEvaluation={handleOpenEvaluationFromTimer}
-            userStats={userStats}
-          />
-        )}
+      {/* Conteúdo Principal */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Barra de Topo exclusiva para Telemóveis */}
+        <header className="md:hidden flex items-center justify-between bg-slate-950 border-b border-slate-800 px-4 py-3 shrink-0">
+          <div className="flex items-center space-x-3">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 text-slate-300 hover:text-amber-400 focus:outline-hidden cursor-pointer"
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <span className="font-extrabold text-sm text-slate-100">OrgaLearn</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs font-mono text-amber-400 bg-slate-900 px-2.5 py-1 rounded-full border border-slate-800 font-bold">
+              🔥 {userStats?.diasOfensiva || 1}d
+            </span>
+            <span className="text-xs font-mono text-amber-400 font-bold">Nv. {userStats?.nivel || 1}</span>
+          </div>
+        </header>
 
-        {activeTab === 'conteudos' && (
-          <ContentsView sessoes={sessoes} />
-        )}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-8">
+          {activeTab === 'timer' && (
+            <StudyTimer 
+              selectedMateria={selectedMateria}
+              setSelectedMateria={setSelectedMateria}
+              materias={materias}
+              handleAddNewMateria={handleAddNewMateria}
+              handleDeleteMateria={handleDeleteMateria}
+              seconds={seconds}
+              isActive={isActive}
+              toggleTimer={toggleTimer}
+              resetTimer={resetTimer}
+              formatTime={formatTime}
+              onOpenEvaluation={handleOpenEvaluationFromTimer}
+              userStats={userStats}
+            />
+          )}
 
-        {activeTab === 'revisoes' && (
-          <ReviewsQueue 
-            revisoes={revisoes} 
-            onReviewNow={(materia, topico) => {
-              setSelectedMateria(materia);
-              setConteudoEspecifico(topico);
-              setActiveTab('timer');
-            }}
-            onDeleteReview={handleDeleteReview}
-          />
-        )}
+          {activeTab === 'conteudos' && (
+            <ContentsView sessoes={sessoes} />
+          )}
 
-        {activeTab === 'dashboard' && (
-          <DashboardView userStats={userStats} sessoes={sessoes} />
-        )}
+          {activeTab === 'revisoes' && (
+            <ReviewsQueue 
+              revisoes={revisoes} 
+              onReviewNow={(materia, topico) => {
+                setSelectedMateria(materia);
+                setConteudoEspecifico(topico);
+                setActiveTab('timer');
+              }}
+              onDeleteReview={handleDeleteReview}
+            />
+          )}
 
-        {activeTab === 'metricas' && (
-          <MetricsView sessoes={sessoes} revisoes={revisoes} />
-        )}
-      </main>
+          {activeTab === 'dashboard' && (
+            <DashboardView userStats={userStats} sessoes={sessoes} />
+          )}
+
+          {activeTab === 'metricas' && (
+            <MetricsView sessoes={sessoes} revisoes={revisoes} />
+          )}
+        </main>
+      </div>
 
       {showEvaluationModal && (
         <div 
