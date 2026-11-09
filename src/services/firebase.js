@@ -2,7 +2,6 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// Substitua com as credenciais do seu projeto na consola do Google Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyCpdB0mYnZ3sQrNyuDWLbaKbuoemE0QxRk",
   authDomain: "orgalearn-e8515.firebaseapp.com",

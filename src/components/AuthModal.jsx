@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { auth, db } from '../services/firebase';
 import { 
   signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signInWithPopup, 
-  GoogleAuthProvider 
+  createUserWithEmailAndPassword 
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -49,23 +47,6 @@ export default function AuthModal({ onLoginSuccess }) {
     } catch (err) {
       console.error(err);
       setErrorMsg('Falha na autenticação. Verifique o seu e-mail e palavra-passe.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleAuth = async () => {
-    setErrorMsg('');
-    setLoading(true);
-    const provider = new GoogleAuthProvider();
-
-    try {
-      const result = await signInWithPopup(auth, provider);
-      await criarPerfilSeNecessario(result.user);
-      onLoginSuccess(result.user);
-    } catch (err) {
-      console.error(err);
-      setErrorMsg('Falha ao autenticar com a conta Google.');
     } finally {
       setLoading(false);
     }
@@ -143,28 +124,13 @@ export default function AuthModal({ onLoginSuccess }) {
           </button>
         </form>
 
-        <div className="relative flex items-center justify-center">
-          <div className="border-t border-slate-800 w-full" />
-          <span className="bg-slate-900 px-2 text-[10px] text-slate-500 uppercase tracking-widest font-bold">ou</span>
-          <div className="border-t border-slate-800 w-full" />
-        </div>
-
-        <button
-          onClick={handleGoogleAuth}
-          disabled={loading}
-          type="button"
-          className="w-full bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 font-semibold py-2.5 rounded-xl transition text-xs flex items-center justify-center space-x-2"
-        >
-          <span>Continuar com Google</span>
-        </button>
-
         <div className="text-center pt-2">
           <button
             type="button"
             onClick={() => setIsSignUp(!isSignUp)}
             className="text-xs text-amber-400 hover:underline font-semibold"
           >
-            {isSignUp ? 'Já tem uma conta? Inicie sessão' : 'Não tem conta? Registe-se agora'}
+            {isSignUp ? 'Já tem uma conta? Inicie sessão' : 'Não tem conta? Registre-se agora'}
           </button>
         </div>
       </div>

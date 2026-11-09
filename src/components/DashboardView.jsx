@@ -72,7 +72,7 @@ export default function DashboardView({ userStats = {}, sessoes = [] }) {
         </p>
       </div>
 
-      {/* 4 CARDS PRINCIPAIS (SEM FATOR EF MÉDIO) */}
+      {/* 4 CARDS PRINCIPAIS  */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/60 shadow-md">
           <div className="flex items-center justify-between text-slate-400 mb-2">

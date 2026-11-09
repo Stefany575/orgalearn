@@ -60,7 +60,7 @@ export default function ContentsView({ sessoes = [] }) {
       {materiasAgrupadas.length === 0 ? (
         <div className="bg-slate-800/80 border border-slate-700/60 p-12 rounded-3xl text-center space-y-3">
           <Folder className="h-12 w-12 text-slate-600 mx-auto" />
-          <p className="text-sm text-slate-400 font-medium">Nenhum conteúdo estudado registado ainda.</p>
+          <p className="text-sm text-slate-400 font-medium">Nenhum conteúdo estudado registrado ainda.</p>
         </div>
       ) : (
         <div className="space-y-6">
@@ -77,7 +77,7 @@ export default function ContentsView({ sessoes = [] }) {
                   </div>
                   <div>
                     <h3 className="text-xl font-black text-slate-100 tracking-tight">{mat.nome}</h3>
-                    <p className="text-xs text-slate-400 font-medium">{mat.registros.length} registo(s) realizado(s)</p>
+                    <p className="text-xs text-slate-400 font-medium">{mat.registros.length} registro(s) realizado(s)</p>
                   </div>
                 </div>
 

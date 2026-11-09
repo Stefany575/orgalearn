@@ -215,7 +215,7 @@ export default function StudyTimer({
         </div>
       </div>
 
-      {/* CARTÃO "SEU PROGRESSO" EXATAMENTE COMO PEDIU (LOGO ABAIXO DO CRONÔMETRO) */}
+      {/* CARTÃO "SEU PROGRESSO"  (LOGO ABAIXO DO CRONÔMETRO) */}
       <div className="bg-slate-800/80 border border-slate-700/60 p-6 rounded-3xl space-y-4 shadow-xl">
         <div className="space-y-3">
           <h3 className="font-bold text-slate-100 text-base">Seu progresso</h3>

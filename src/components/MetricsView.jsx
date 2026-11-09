@@ -150,7 +150,7 @@ export default function MetricsView({ sessoes = [] }) {
         </div>
 
         {topTopicos.length === 0 ? (
-          <p className="text-xs text-slate-500 py-3 text-center">Nenhum tópico registado ainda.</p>
+          <p className="text-xs text-slate-500 py-3 text-center">Nenhum tópico registrado ainda.</p>
         ) : (
           <div className="space-y-2.5 pt-1">
             {topTopicos.map((item) => (
@@ -175,7 +175,7 @@ export default function MetricsView({ sessoes = [] }) {
           </div>
 
           {dadosPorMateria.length === 0 ? (
-            <p className="text-xs text-slate-500 py-10 text-center">Nenhuma sessão registada.</p>
+            <p className="text-xs text-slate-500 py-10 text-center">Nenhuma sessão registrada.</p>
           ) : (
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">

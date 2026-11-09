@@ -31,7 +31,8 @@ O **OrgaLearn** é uma aplicação web desenvolvida como projeto final de curso 
 4. Configura as tuas credenciais do Firebase num ficheiro de ambiente (.env).
 
 5. Inicia o servidor de desenvolvimento:
-    ```npm run dev
+    ```bash
+    npm run dev
 
 ## 👩‍💻 Desenvolvida por
 **Stefany Natacha Szynwelski** — Análise e Desenvolvimento de Sistemas (Unisinos).

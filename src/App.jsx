@@ -321,7 +321,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-slate-900 text-slate-100 font-sans overflow-hidden">
-      {/* Sidebar Responsiva (Gaveta no telemóvel e fixa no PC) */}
+      {/* Sidebar Responsiva (Gaveta no Smartphone e fixa no PC) */}
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
@@ -341,7 +341,7 @@ export default function App() {
 
       {/* Conteúdo Principal */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Barra de Topo exclusiva para Telemóveis */}
+        {/* Barra de Topo exclusiva para Smartphone */}
         <header className="md:hidden flex items-center justify-between bg-slate-950 border-b border-slate-800 px-4 py-3 shrink-0">
           <div className="flex items-center space-x-3">
             <button 
@@ -441,14 +441,14 @@ export default function App() {
                 autoFocus
                 value={conteudoEspecifico}
                 onChange={(e) => setConteudoEspecifico(e.target.value)}
-                placeholder="Ex: Diagramas de Sequência, Normalização..."
+                placeholder="Ex: Diagramas de Sequência, Geometria..."
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-400"
               />
             </div>
 
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-slate-300">
-                Como avalia a sua retenção neste conteúdo?
+                Como avalia a sua facilidade neste conteúdo?
               </label>
               <div className="grid grid-cols-6 gap-2">
                 {[0, 1, 2, 3, 4, 5].map((nota) => (
@@ -466,8 +466,8 @@ export default function App() {
                 ))}
               </div>
               <div className="flex justify-between text-[11px] text-slate-500">
-                <span>0 - Esqueci tudo</span>
-                <span>5 - Domínio total</span>
+                <span>0 - Difícil</span>
+                <span>5 - Fácil</span>
               </div>
             </div>
 

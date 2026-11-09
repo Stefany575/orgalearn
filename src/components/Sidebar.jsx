@@ -31,7 +31,7 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Fundo escurecido no telemóvel quando o menu está aberto */}
+      {/* Fundo escurecido no Smartphone quando o menu está aberto */}
       {isOpen && (
         <div 
           onClick={() => setIsOpen(false)} 
@@ -39,7 +39,7 @@ export default function Sidebar({
         />
       )}
 
-      {/* Sidebar: Fixa no PC, Gaveta deslizante no Telemóvel */}
+      {/* Sidebar: Fixa no PC, Gaveta deslizante no Smartphone */}
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-slate-950 border-r border-slate-800/80 
         flex flex-col justify-between shrink-0 select-none transition-transform duration-300 ease-in-out
@@ -47,7 +47,7 @@ export default function Sidebar({
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="p-6 space-y-8">
-          {/* Cabeçalho com botão de fechar no telemóvel */}
+          {/* Cabeçalho com botão de fechar no Smartphone */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="h-10 w-10 rounded-2xl overflow-hidden flex items-center justify-center bg-transparent shrink-0">
@@ -77,7 +77,7 @@ export default function Sidebar({
                   key={item.id}
                   onClick={() => {
                     setActiveTab(item.id);
-                    setIsOpen(false); // Fecha o menu automaticamente no telemóvel ao clicar
+                    setIsOpen(false); // Fecha o menu automaticamente no Smartphone ao clicar
                   }}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition cursor-pointer ${
                     isActive
