@@ -9,12 +9,12 @@ import {
   serverTimestamp,
   doc,
   getDoc,
-  updateDoc
+  updateDoc,
+  deleteDoc
 } from 'firebase/firestore';
 
-/**
- * Adiciona um novo tópico estudado na coleção 'topicos'
- */
+//Ligação entre o React e Firebase Firestore
+//Gestão de Tópicos
 export async function addTopico(userId, titulo, descricao = '') {
   return await addDoc(collection(db, 'topicos'), {
     usuario_id: userId,
@@ -24,9 +24,8 @@ export async function addTopico(userId, titulo, descricao = '') {
   });
 }
 
-/**
- * Procura todos os tópicos pertencentes ao utilizador
- */
+//Procura todos os tópicos pertencentes ao utilizador
+ 
 export async function getTopicosByUser(userId) {
   const q = query(
     collection(db, 'topicos'), 
@@ -37,16 +36,14 @@ export async function getTopicosByUser(userId) {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-/**
- * Atualiza os dias de ofensiva (streak) do utilizador com base na data de hoje
- */
+//Gamificação e Sessões de Estudo
 export async function atualizarOfensiva(userId) {
   if (!userId) return 0;
 
   const userRef = doc(db, 'usuarios', userId);
   const userSnap = await getDoc(userRef);
 
-  // Se o documento do utilizador não existir na coleção 'usuarios', ignoramos por segurança
+
   if (!userSnap.exists()) return 0;
 
   const dadosUser = userSnap.data();
@@ -57,7 +54,6 @@ export async function atualizarOfensiva(userId) {
   const ultimaData = dadosUser.ultimaDataEstudo;
   let diasOfensiva = Number(dadosUser.diasOfensiva) || 0;
 
-  // Se já registou estudo hoje, não altera o contador
   if (ultimaData === hojeStr) return diasOfensiva;
 
   const ontem = new Date(hoje);
@@ -65,14 +61,11 @@ export async function atualizarOfensiva(userId) {
   const ontemStr = ontem.toISOString().split('T')[0];
 
   if (ultimaData === ontemStr) {
-    // Se estudou ontem, incrementa a ofensiva em 1
     diasOfensiva += 1;
   } else {
-    // Se passou mais de um dia sem estudar, reinicia a ofensiva para 1
     diasOfensiva = 1;
   }
 
-  // Atualiza no Firebase Firestore
   await updateDoc(userRef, {
     diasOfensiva: diasOfensiva,
     ultimaDataEstudo: hojeStr
@@ -81,12 +74,8 @@ export async function atualizarOfensiva(userId) {
   return diasOfensiva;
 }
 
-/**
- * Grava o encerramento de uma sessão de cronómetro na coleção 'sessoes'
- * e atualiza automaticamente os dias de ofensiva do utilizador.
- */
+
 export async function saveSessao(userId, topicoId, duracaoSegundos) {
-  // 1. Guarda a sessão de estudo
   const sessaoRef = await addDoc(collection(db, 'sessoes'), {
     usuario_id: userId,
     topico_id: topicoId,
@@ -94,15 +83,13 @@ export async function saveSessao(userId, topicoId, duracaoSegundos) {
     criado_em: serverTimestamp()
   });
 
-  // 2. Atualiza os dias de ofensiva do utilizador após concluir o estudo
+  
   await atualizarOfensiva(userId);
 
   return sessaoRef;
 }
 
-/**
- * Regista o agendamento de uma revisão calculada pelo algoritmo SM-2
- */
+//Repetição Espaçada (SM-2)
 export async function scheduleRevisao(topicoId, dataAgendada, avaliacao, intervaloDias, fatorFacilidade) {
   return await addDoc(collection(db, 'revisoes'), {
     topico_id: topicoId,
@@ -114,4 +101,37 @@ export async function scheduleRevisao(topicoId, dataAgendada, avaliacao, interva
     status: 'pendente',
     criado_em: serverTimestamp()
   });
+}
+
+//Exclusão de Dados
+export async function deleteMateriaCompleta(userId, materiaNome) {
+  const qMateria = query(
+    collection(db, 'materias'), 
+    where('usuario_id', '==', userId), 
+    where('nome', '==', materiaNome)
+  );
+  const snapMateria = await getDocs(qMateria);
+  const deleteMateriasPromises = snapMateria.docs.map(d => deleteDoc(doc(db, 'materias', d.id)));
+  await Promise.all(deleteMateriasPromises);
+
+  const qRevisoes = query(
+    collection(db, 'revisoes'), 
+    where('usuario_id', '==', userId), 
+    where('materia', '==', materiaNome)
+  );
+  const snapRevisoes = await getDocs(qRevisoes);
+  const deleteRevisoesPromises = snapRevisoes.docs.map(d => deleteDoc(doc(db, 'revisoes', d.id)));
+  await Promise.all(deleteRevisoesPromises);
+}
+
+//Remove os agendamentos de revisão de um tópico específico
+export async function deleteRevisaoAgendada(userId, topicoNome) {
+  const q = query(
+    collection(db, 'revisoes'), 
+    where('usuario_id', '==', userId), 
+    where('topico', '==', topicoNome)
+  );
+  const snapshot = await getDocs(q);
+  const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'revisoes', d.id)));
+  await Promise.all(deletePromises);
 }

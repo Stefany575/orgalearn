@@ -10,6 +10,8 @@ import {
 } from 'recharts';
 
 export default function DashboardView({ userStats = {}, sessoes = [] }) {
+
+  //Cálculo Tempo Total de Mês Atual
   const totalHorasMes = useMemo(() => {
     const hoje = new Date();
     const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
@@ -27,11 +29,13 @@ export default function DashboardView({ userStats = {}, sessoes = [] }) {
       if (dataSessao >= inicioMes) segMes += duracao;
     });
 
+    // Formata os segundos totais para o padrão "Xh YYm"
     const h = Math.floor(segMes / 3600);
     const m = Math.floor((segMes % 3600) / 60);
     return `${h}h ${m.toString().padStart(2, '0')}m`;
   }, [sessoes]);
 
+  //Cálculo Dados do Gráfico Semanal
   const dadosGraficoSemanal = useMemo(() => {
     const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     const hoje = new Date();
@@ -63,8 +67,10 @@ export default function DashboardView({ userStats = {}, sessoes = [] }) {
     return Object.values(mapaDias);
   }, [sessoes]);
 
+  //Interface da Tela
   return (
     <div className="space-y-6">
+      {/* Cabeçalho */}
       <div>
         <h2 className="text-3xl font-extrabold text-slate-100">Painel Geral</h2>
         <p className="text-slate-400 text-sm mt-1">
@@ -110,7 +116,7 @@ export default function DashboardView({ userStats = {}, sessoes = [] }) {
             <Zap className="h-4 w-4 text-orange-400" />
           </div>
           <p className="text-2xl font-bold font-mono text-orange-300">
-            {userStats.streak || 1} dia(s)
+            {userStats.diasOfensiva || 0} dia(s)
           </p>
         </div>
       </div>

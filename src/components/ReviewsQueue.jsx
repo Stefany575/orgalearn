@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { BookOpen, Clock, Calendar, Folder, RotateCw, Trash2 } from 'lucide-react';
 
 export default function ReviewsQueue({ revisoes = [], onReviewNow, onDeleteReview }) {
+  //Agrupamento por Matéria
   const materiasAgrupadas = useMemo(() => {
     const mapa = {};
 
@@ -21,8 +22,10 @@ export default function ReviewsQueue({ revisoes = [], onReviewNow, onDeleteRevie
     return Object.values(mapa);
   }, [revisoes]);
 
+  //Interface da Tela
   return (
     <div className="space-y-6">
+      {/* Cabeçalho da página */}
       <div>
         <h2 className="text-3xl font-extrabold text-slate-100">Fila de Revisões</h2>
         <p className="text-slate-400 text-sm mt-1">
@@ -30,6 +33,7 @@ export default function ReviewsQueue({ revisoes = [], onReviewNow, onDeleteRevie
         </p>
       </div>
 
+      {/* Condição: Se a fila estiver vazia, exibe mensagem de tela limpa */}
       {materiasAgrupadas.length === 0 ? (
         <div className="bg-slate-800/80 p-8 rounded-2xl border border-slate-700/60 text-center space-y-3">
           <BookOpen className="h-10 w-10 text-slate-600 mx-auto" />
@@ -40,6 +44,7 @@ export default function ReviewsQueue({ revisoes = [], onReviewNow, onDeleteRevie
         </div>
       ) : (
         <div className="grid gap-6">
+          {/* Mapeia e renderiza as "Pastas" de matérias */}
           {materiasAgrupadas.map((grupo) => (
             <div
               key={grupo.materia}
@@ -59,6 +64,7 @@ export default function ReviewsQueue({ revisoes = [], onReviewNow, onDeleteRevie
                 </div>
               </div>
 
+              {/* Mapeia e renderiza cada revisão pendente (os cartões individuais) */}
               <div className="space-y-3">
                 {grupo.itens.map((rev) => (
                   <div

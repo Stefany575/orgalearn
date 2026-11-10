@@ -1,34 +1,33 @@
 import React from 'react';
 import { Clock, BookOpen, RotateCcw, LayoutDashboard, BarChart2, LogOut, X } from 'lucide-react';
 
+//Componente de Navegação Lateral
 export default function Sidebar({ 
   activeTab, 
   setActiveTab, 
   userStats = {}, 
-  pendingReviewsCount = 0,
   onLogout,
   isOpen,
   setIsOpen
 }) {
+
+  //Configuração do Menu
   const menuItems = [
     { id: 'timer', label: 'Estudo Ativo', icon: Clock },
     { id: 'conteudos', label: 'Conteúdos Estudados', icon: BookOpen },
-    { 
-      id: 'revisoes', 
-      label: 'Fila de Revisões', 
-      icon: RotateCcw, 
-      badge: pendingReviewsCount > 0 ? pendingReviewsCount : null 
-    },
+    { id: 'revisoes', label: 'Fila de Revisões', icon: RotateCcw },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'metricas', label: 'Métricas e Análise', icon: BarChart2 },
   ];
 
+  //Cálculo de Gamificação Barra de XP
   const nivel = userStats?.nivel || 1;
   const xpTotal = userStats?.xp || 0;
   const xpNoNivel = xpTotal % 1000;
   const xpNecessario = 1000;
   const progressoPercent = Math.min(100, Math.round((xpNoNivel / xpNecessario) * 100));
 
+  //Interface da Tela
   return (
     <>
       {/* Fundo escurecido no Smartphone quando o menu está aberto */}
@@ -89,20 +88,13 @@ export default function Sidebar({
                     <Icon className={`h-4 w-4 ${isActive ? 'text-slate-950' : 'text-slate-400'}`} />
                     <span>{item.label}</span>
                   </div>
-                  {item.badge && (
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                      isActive ? 'bg-slate-950 text-amber-400' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                    }`}>
-                      {item.badge}
-                    </span>
-                  )}
                 </button>
               );
             })}
           </nav>
         </div>
 
-        {/* Perfil e Progresso do Utilizador */}
+        {/* Rodapé do Menu: Mostra os dados de gamificação do utilizador e o botão de Sair */}
         <div className="p-4 m-4 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-200 truncate max-w-[120px]">

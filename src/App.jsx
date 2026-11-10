@@ -9,24 +9,22 @@ import AuthModal from './components/AuthModal';
 import { useTimer } from './hooks/useTimer';
 import { calculateSM2 } from './utils/sm2';
 import { auth, db } from './services/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { X } from 'lucide-react';
-import { atualizarOfensiva } from './services/dataService';
+import { atualizarOfensiva, deleteMateriaCompleta, deleteRevisaoAgendada } from './services/dataService';
 import { 
-  collection, 
+  collection,
   query, 
   where, 
   onSnapshot, 
   addDoc, 
   doc, 
   updateDoc,
-  deleteDoc,
-  getDocs,
   serverTimestamp 
 } from 'firebase/firestore';
 
 export default function App() {
+  //Estado Global da Aplicação
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('timer');
@@ -35,6 +33,7 @@ export default function App() {
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
   const [conteudoEspecifico, setConteudoEspecifico] = useState('');
 
+  //Status de Gamificação e Estatísticas Base
   const [userStats, setUserStats] = useState({
     nome: "Estudante",
     nivel: 1,
@@ -46,6 +45,7 @@ export default function App() {
     diasOfensiva: 1
   });
 
+  //Dados trazidos do Banco de Dados
   const [materias, setMaterias] = useState([]);
   const [selectedMateria, setSelectedMateria] = useState('');
   const [revisoes, setRevisoes] = useState([]);
@@ -138,6 +138,7 @@ export default function App() {
     };
   }, [user, selectedMateria]);
 
+//Lógica Funcional, cronômetro e ações
   const { seconds, isActive, toggleTimer, resetTimer, formatTime } = useTimer();
 
   const hojeStr = new Date().toISOString().split('T')[0];
@@ -162,19 +163,11 @@ export default function App() {
 
   const handleDeleteMateria = async (materiaNome) => {
     if (!user || !materiaNome) return;
-    const confirmacao = window.confirm(`Deseja realmente excluir a matéria "${materiaNome}"?`);
+    const confirmacao = window.confirm(`Deseja realmente excluir a matéria "${materiaNome}" e todas as suas revisões?`);
     if (!confirmacao) return;
 
     try {
-      const q = query(
-        collection(db, 'materias'), 
-        where('usuario_id', '==', user.uid), 
-        where('nome', '==', materiaNome)
-      );
-      const snapshot = await getDocs(q);
-      const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'materias', d.id)));
-      await Promise.all(deletePromises);
-
+      await deleteMateriaCompleta(user.uid, materiaNome);
       if (selectedMateria === materiaNome) {
         const restantes = materias.filter(m => m !== materiaNome);
         setSelectedMateria(restantes.length > 0 ? restantes[0] : '');
@@ -190,19 +183,13 @@ export default function App() {
     if (!confirmacao) return;
 
     try {
-      const q = query(
-        collection(db, 'revisoes'),
-        where('usuario_id', '==', user.uid),
-        where('topico', '==', review.topico)
-      );
-      const snapshot = await getDocs(q);
-      const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'revisoes', d.id)));
-      await Promise.all(deletePromises);
+      await deleteRevisaoAgendada(user.uid, review.topico);
     } catch (err) {
       console.error('Erro ao remover revisão:', err);
     }
   };
 
+  //Fluxo de Avaliação(SM-2 e XP)
   const handleOpenEvaluationFromTimer = () => {
     setShowEvaluationModal(true);
   };
@@ -275,10 +262,8 @@ export default function App() {
         });
       }
 
-      // ATUALIZA OS DIAS DE OFENSIVA NO FIRESTORE AO CONCLUIR O ESTUDO
       await atualizarOfensiva(user.uid);
 
-      // CÁLCULO DE XP
       const minutosEstudados = Math.max(1, Math.floor(duracaoSessao / 60));
       const xpGanhos = minutosEstudados; 
 
@@ -307,6 +292,7 @@ export default function App() {
     setShowEvaluationModal(false);
   };
 
+  //Interface
   if (authLoading) {
     return (
       <div className="h-screen bg-slate-950 flex items-center justify-center text-amber-400 font-bold">
@@ -319,9 +305,9 @@ export default function App() {
     return <AuthModal onLoginSuccess={(currentUser) => setUser(currentUser)} />;
   }
 
+  //Layout Principal da Aplicação
   return (
     <div className="flex h-screen bg-slate-900 text-slate-100 font-sans overflow-hidden">
-      {/* Sidebar Responsiva (Gaveta no Smartphone e fixa no PC) */}
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
@@ -339,9 +325,7 @@ export default function App() {
         }}
       />
 
-      {/* Conteúdo Principal */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Barra de Topo exclusiva para Smartphone */}
         <header className="md:hidden flex items-center justify-between bg-slate-950 border-b border-slate-800 px-4 py-3 shrink-0">
           <div className="flex items-center space-x-3">
             <button 
@@ -377,6 +361,7 @@ export default function App() {
               formatTime={formatTime}
               onOpenEvaluation={handleOpenEvaluationFromTimer}
               userStats={userStats}
+              revisoes={revisoes}
             />
           )}
 
@@ -406,6 +391,7 @@ export default function App() {
         </main>
       </div>
 
+      {/*Avaliação*/}
       {showEvaluationModal && (
         <div 
           onClick={() => setShowEvaluationModal(false)}

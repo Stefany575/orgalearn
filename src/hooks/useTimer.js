@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 
+//Hook Customizado - lógica do Cronômetro
 export function useTimer() {
+  //Estados - variáveis de controle
   const [seconds, setSeconds] = useState(0); // Inicia em 00:00
   const [isActive, setIsActive] = useState(false);
 
+  //Lógica do Tempo
   useEffect(() => {
     let interval = null;
     if (isActive) {
@@ -17,6 +20,7 @@ export function useTimer() {
     return () => clearInterval(interval);
   }, [isActive]);
 
+  //Funções de Controle
   const toggleTimer = () => setIsActive((prev) => !prev);
   
   const resetTimer = () => {
@@ -24,12 +28,14 @@ export function useTimer() {
     setSeconds(0);
   };
 
+  //Formatação, coverte o tempo para formato MM:SS
   const formatTime = (totalSeconds) => {
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  //Devolve as variáveis e funções para serem usadas na parte visual
   return {
     seconds,
     setSeconds,

@@ -2,16 +2,18 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
+//Configuração do Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyCpdB0mYnZ3sQrNyuDWLbaKbuoemE0QxRk",
-  authDomain: "orgalearn-e8515.firebaseapp.com",
-  projectId: "orgalearn-e8515",
-  storageBucket: "orgalearn-e8515.firebasestorage.app",
-  messagingSenderId: "306183541882",
-  appId: "1:306183541882:web:6e83de9a342db2d94b17c3"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
 
+//Exportação dos Serviços
 export const auth = getAuth(app);
 export const db = getFirestore(app);

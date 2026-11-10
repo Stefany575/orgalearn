@@ -8,12 +8,13 @@ import {
   ResponsiveContainer
 } from 'recharts';
 
+//Paleta de cores para os gráficos e listas
 const CORES_PALETA = [
   '#f59e0b', '#10b981', '#6366f1', '#ec4899', '#8b5cf6', '#06b6d4', '#f97316'
 ];
 
 export default function MetricsView({ sessoes = [] }) {
-  // 1. Consolidação Temporal (Hoje e Semana)
+  // 1. Cálculo Tempo de Estudo(Hoje e Semana)
   const metricasTempo = useMemo(() => {
     const hoje = new Date();
     const hojeStr = hoje.toISOString().split('T')[0];
@@ -39,6 +40,7 @@ export default function MetricsView({ sessoes = [] }) {
       if (dataSessao >= seteDiasAtras) segSemana += duracao;
     });
 
+    // Formata o tempo de segundos para "Xh YYm"
     const formatarHoras = (seg) => {
       const h = Math.floor(seg / 3600);
       const m = Math.floor((seg % 3600) / 60);
@@ -57,7 +59,7 @@ export default function MetricsView({ sessoes = [] }) {
     return sessoes.length;
   }, [sessoes]);
 
-  // 2. Top 3 Tópicos Mais Estudados
+  // Top 3 Tópicos Mais Estudados
   const topTopicos = useMemo(() => {
     const mapa = {};
     sessoes.forEach((s) => {
@@ -81,7 +83,7 @@ export default function MetricsView({ sessoes = [] }) {
       .slice(0, 3);
   }, [sessoes]);
 
-  // 3. Distribuição Consolidada por Matéria
+  // Cálculo istribuição Consolidada por Matéria
   const dadosPorMateria = useMemo(() => {
     const mapa = {};
     sessoes.forEach((s) => {
@@ -106,8 +108,10 @@ export default function MetricsView({ sessoes = [] }) {
       .sort((a, b) => b.segundos - a.segundos);
   }, [sessoes]);
 
+  //INterface da Tela
   return (
     <div className="space-y-6">
+      {/* Cabeçalho da página */}
       <div>
         <h2 className="text-3xl font-extrabold text-slate-100">Métricas e Análise</h2>
         <p className="text-slate-400 text-sm mt-1">

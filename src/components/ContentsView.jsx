@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Folder, Clock, Calendar, CheckCircle2 } from 'lucide-react';
 
 export default function ContentsView({ sessoes = [] }) {
-  // Agrupar e ordenar sessões por matéria (da mais recente para a mais antiga)
+  // Processamento de Dados 
   const materiasAgrupadas = useMemo(() => {
     const mapa = {};
 
@@ -13,6 +13,7 @@ export default function ContentsView({ sessoes = [] }) {
       return dataB - dataA; // Mais recente primeiro
     });
 
+    //Agrupa as sessões pela sua respectiva 'matéria", criando um objeto para cada com informações
     sessoesOrdenadas.forEach((s) => {
       const materia = s.materia || 'Geral';
       if (!mapa[materia]) {
@@ -29,12 +30,14 @@ export default function ContentsView({ sessoes = [] }) {
     return Object.values(mapa);
   }, [sessoes]);
 
+  // Converte os segundos brutos do banco de dados para o formato de horas e minutos
   const formatarTempoTotal = (segundos) => {
     const h = Math.floor(segundos / 3600);
     const m = Math.floor((segundos % 3600) / 60);
     return `${h}h ${m.toString().padStart(2, '0')}m`;
   };
 
+  // Formata o timestamp do Firebase para uma data legível
   const formatarData = (timestamp) => {
     if (!timestamp) return 'Data recente';
     const data = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -48,8 +51,11 @@ export default function ContentsView({ sessoes = [] }) {
     });
   };
 
+  //Interface da Tela
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
+
+      {/* Cabeçalho da página */}
       <div>
         <h2 className="text-3xl font-extrabold text-slate-100">Histórico de Conteúdos</h2>
         <p className="text-slate-400 text-sm mt-1">
@@ -57,6 +63,7 @@ export default function ContentsView({ sessoes = [] }) {
         </p>
       </div>
 
+      {/* Condição: Se não houver nada, mostra um aviso amigável. Caso contrário, renderiza a lista. */}
       {materiasAgrupadas.length === 0 ? (
         <div className="bg-slate-800/80 border border-slate-700/60 p-12 rounded-3xl text-center space-y-3">
           <Folder className="h-12 w-12 text-slate-600 mx-auto" />
@@ -64,12 +71,14 @@ export default function ContentsView({ sessoes = [] }) {
         </div>
       ) : (
         <div className="space-y-6">
+
+          {/* Mapeamento principal: Cria um grande bloco (Card) para cada Matéria */}
           {materiasAgrupadas.map((mat) => (
             <div 
               key={mat.nome} 
               className="bg-slate-800/80 border border-slate-700/60 p-6 rounded-3xl space-y-6 shadow-xl"
             >
-              {/* Cabeçalho da Matéria */}
+              {/* Título do Card: Mostra o nome da matéria, a quantidade de registros e o tempo total gasto nela */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-700/60 pb-4 gap-2">
                 <div className="flex items-center space-x-3">
                   <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-400">
@@ -87,7 +96,7 @@ export default function ContentsView({ sessoes = [] }) {
                 </div>
               </div>
 
-              {/* Lista de Registos (Já ordenada do mais recente para o mais antigo) */}
+              {/* Sub-lista: Mostra todas as sessões individuais feitas dentro desta matéria */}
               <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
                 {mat.registros.map((reg, idx) => {
                   const minutos = Math.round((Number(reg.duracao_segundos) || 0) / 60);

@@ -18,7 +18,7 @@ O **OrgaLearn** é uma aplicação web desenvolvida como projeto final de curso 
 
 1. Clona este repositório:
    ```bash
-   git clone [https://github.com/teu-utilizador/orgalearn.git](https://github.com/teu-utilizador/orgalearn.git)
+   git clone https://github.com/SEU_UTILIZADOR/orgalearn.git
 
 2. Entra na pasta do projeto:
     ```bash
@@ -28,7 +28,13 @@ O **OrgaLearn** é uma aplicação web desenvolvida como projeto final de curso 
     ```bash
     npm install
 
-4. Configura as tuas credenciais do Firebase num ficheiro de ambiente (.env).
+4. Configura as tuas credenciais do Firebase num ficheiro de ambiente (.env) na raiz do projeto coma seguinte estrutura:
+    VITE_FIREBASE_API_KEY="sua_api_key"
+    VITE_FIREBASE_AUTH_DOMAIN="seu_auth_domain"
+    VITE_FIREBASE_PROJECT_ID="seu_project_id"
+    VITE_FIREBASE_STORAGE_BUCKET="seu_storage_bucket"
+    VITE_FIREBASE_MESSAGING_SENDER_ID="seu_sender_id"
+    VITE_FIREBASE_APP_ID="seu_app_id"
 
 5. Inicia o servidor de desenvolvimento:
     ```bash

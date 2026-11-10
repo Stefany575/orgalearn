@@ -7,6 +7,7 @@ import {
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function AuthModal({ onLoginSuccess }) {
+  //Variáveis de estado que controlam os campos do formulário e o comportamento da tela
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,6 +15,7 @@ export default function AuthModal({ onLoginSuccess }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
+  //Criar Perfil
   const criarPerfilSeNecessario = async (user, nomePadrao) => {
     const userDocRef = doc(db, 'usuarios', user.uid);
     const snap = await getDoc(userDocRef);
@@ -30,6 +32,7 @@ export default function AuthModal({ onLoginSuccess }) {
     }
   };
 
+  //Função de Autenticação do Login
   const handleEmailAuth = async (e) => {
     e.preventDefault();
     setErrorMsg('');
@@ -37,10 +40,12 @@ export default function AuthModal({ onLoginSuccess }) {
 
     try {
       if (isSignUp) {
+        //Fluxo de criação de nova conta
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await criarPerfilSeNecessario(userCredential.user, nome);
         onLoginSuccess(userCredential.user);
       } else {
+        //Fluxo de login de conta existente
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         onLoginSuccess(userCredential.user);
       }
@@ -52,11 +57,12 @@ export default function AuthModal({ onLoginSuccess }) {
     }
   };
 
+    //Estrutura visual da Autenticação
   return (
     <div className="fixed inset-0 bg-slate-950 flex items-center justify-center p-4 z-50">
       <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-sm w-full space-y-6 shadow-2xl">
+        {/* Cabeçalho */}
         <div className="text-center space-y-2">
-          {/* LOGO DA APLICAÇÃO */}
           <img 
             src="/logo.png" 
             alt="OrgaLearn Logo" 
@@ -70,12 +76,14 @@ export default function AuthModal({ onLoginSuccess }) {
           </p>
         </div>
 
+        {/* Exibição de mensagens de erro */}
         {errorMsg && (
           <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs p-3 rounded-xl text-center">
             {errorMsg}
           </div>
         )}
 
+        {/* Formulário de dados */}
         <form onSubmit={handleEmailAuth} className="space-y-3">
           {isSignUp && (
             <div>
@@ -124,6 +132,7 @@ export default function AuthModal({ onLoginSuccess }) {
           </button>
         </form>
 
+        {/* Alternância entre telas de Login e Registo */}
         <div className="text-center pt-2">
           <button
             type="button"

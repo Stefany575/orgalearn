@@ -16,6 +16,8 @@ export default function StudyTimer({
   userStats = {},
   revisoes = []
 }) {
+
+  //Estados Locais e Funções de Matéria
   const [isAdding, setIsAdding] = useState(false);
   const [novaMateria, setNovaMateria] = useState('');
 
@@ -27,7 +29,8 @@ export default function StudyTimer({
     setIsAdding(false);
   };
 
-  const streakDias = userStats?.streak || 1;
+  //Cálcuos de Gamificação
+  const streakDias = userStats?.diasOfensiva || 0;
 
   // Gamificação baseada em blocos de 1000 XP por Nível
   const nivel = userStats?.nivel || 1;
@@ -77,9 +80,10 @@ export default function StudyTimer({
       .slice(0, 3);
   }, [revisoes]);
 
+  //Interface da Tela
   return (
     <div className="max-w-xl mx-auto space-y-6">
-      {/* Pílula de Ofensiva */}
+      {/* Cabeçalho com o contador de Ofensiva */}
       <div className="relative text-center space-y-2">
         <div className="flex justify-end mb-2 sm:mb-0 sm:absolute sm:right-0 sm:top-0">
           <div className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full border border-emerald-500/40 bg-emerald-950/20 text-emerald-400 text-xs font-bold shadow-sm">
@@ -127,6 +131,7 @@ export default function StudyTimer({
           )}
         </div>
 
+        {/* Alterna entre o Formulário (input) e a Lista de Seleção (select) */}
         {isAdding ? (
           <form onSubmit={submitNovaMateria} className="flex space-x-2">
             <input
